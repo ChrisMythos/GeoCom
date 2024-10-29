@@ -1,31 +1,32 @@
-# GeoCom
+# Konvexe Hülle Visualisierer
 
-Excercises for Lecture Computational Geometry with Prof. Georg Umlauf
+Dieses Programm ist eine grafische Anwendung zur Visualisierung von Algorithmen zur Berechnung der konvexen Hülle einer Punktmenge im 2D-Raum. Es unterstützt die folgenden Algorithmen:
 
-## How the Algorithm and Visualization Work for Graham's Scan:
+- **Graham Scan**
+- **Jarvis' March**
 
-1. Sort Points: Points are sorted from left to right.
+## Funktionen
 
-2. Construct Lower Hull:
+- **Interaktive Punkterfassung**: Klicken Sie auf die Zeichenfläche, um Punkte hinzuzufügen.
+- **Algorithmusauswahl**: Wählen Sie zwischen "Graham Scan" und "Jarvis' March".
+- **Visualisierungsverzögerung**: Passen Sie die Verzögerung zwischen den Visualisierungsschritten mit einem Schieberegler an.
+- **Schrittweise Visualisierung**: Beobachten wie die konvexe Hülle Schritt für Schritt aufgebaut wird.
+- **Zurücksetzen**: Löschen Sie die aktuelle Punktemenge und beginnen Sie von vorne.
 
-   - Start with an empty lower list.
-   - Iterate over the sorted points.
-   - For each point p:
-     - Remove the last point from lower if adding p would make a non-left turn (clockwise).
-     - Add p to lower.
-   - Visualization:
-     Draw the scan line at p[0].
-     Update the partial hull.
+## Voraussetzungen
 
-3. Construct Upper Hull:
+- **Python 3.x**
+- **Tkinter-Bibliothek** (normalerweise in Python-Installationen enthalten)
 
-   - Repeat the process for the upper hull, but iterate over the points in reverse order.
+## Installation
 
-4. Combine Hulls:
+1. Stellen Sie sicher, dass Python 3.x auf Ihrem System installiert ist.
+2. Laden Sie die Datei `convex_hull_visualizer.py` herunter oder kopieren Sie den obigen Code in eine neue Python-Datei mit diesem Namen.
 
-   - Concatenate lower and upper (excluding the last point of each to avoid duplication) to get the full convex hull.
+## Ausführung
 
-5. Final Visualization:
+Führen Sie das Programm über die Kommandozeile oder ein Python-kompatibles IDE aus:
 
-   - Draw the complete convex hull in red.
-   - Remove the scan line.
+```bash
+python convex_hull_visualizer.py
+```
