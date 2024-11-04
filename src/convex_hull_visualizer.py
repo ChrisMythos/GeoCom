@@ -49,15 +49,14 @@ delay_slider = tk.Scale(
     sidebar,
     from_=0.0,
     to=2.0,
-    resolution=0.1,
+    resolution=0.05,
     orient='horizontal',
     variable=delay_var
 )
 delay_slider.pack()
 
-# Function to compute the convex hull using the selected algorithm
 
-
+# Function to call the selected algorithm to compute the convex hull
 def compute_convex_hull():
     # Check if there are enough points to compute the convex hull
     if len(points) < 3:
@@ -108,18 +107,13 @@ def add_point(event):
 # Bind the left mouse button click event to the canvas
 canvas.bind("<Button-1>", add_point)
 
+
 # Function to calculate the cross product (ccw test) of three points p1, p2, p3 using NumPy
-
-
 def ccwNP(p1, p2, p3):
-    p1 = np.array(p1)
-    p2 = np.array(p2)
-    p3 = np.array(p3)
-    return np.cross(p2 - p1, p3 - p1)
+    return np.cross(np.array(p2) - np.array(p1), np.array(p3) - np.array(p1))
+
 
 # Function to calculate the cross product (ccw test) of three points p1, p2, p3
-
-
 def ccw(p1, p2, p3):
     return (p2[0] - p1[0]) * (p3[1] - p1[1]) - (p2[1] - p1[1]) * (p3[0] - p1[0])
 
@@ -227,7 +221,7 @@ def jarvis_march(points_input):
     all_points = points_input.copy()
     n = len(all_points)
 
-    # Find the leftmost point
+    # Find the leftmost point and set
     leftmost = min(all_points, key=lambda p: p[0])
     point_on_hull = leftmost
     hull = []
@@ -236,7 +230,7 @@ def jarvis_march(points_input):
     canvas.delete("hull_line")
     canvas.delete("scan_line")
     # Initialize the loop counter
-    i = 0
+    iterations = 0
     while True:
         # Add the current point on the hull to the hull list
         hull.append(point_on_hull)
@@ -282,7 +276,8 @@ def jarvis_march(points_input):
         if endpoint == hull[0]:
             break
         # Increment the loop counter
-        i += 1
+        iterations += 1
+        # ---- end of while loop----
 
     # Draw the final convex hull
     draw_convex_hull(hull)
