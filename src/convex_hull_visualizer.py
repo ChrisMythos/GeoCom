@@ -56,6 +56,8 @@ delay_slider = tk.Scale(
 delay_slider.pack()
 
 # Function to compute the convex hull using the selected algorithm
+
+
 def compute_convex_hull():
     # Check if there are enough points to compute the convex hull
     if len(points) < 3:
@@ -106,7 +108,9 @@ def add_point(event):
 # Bind the left mouse button click event to the canvas
 canvas.bind("<Button-1>", add_point)
 
-# Function to calculate the cross product (ccw test) of three points p1, p2, p3 using NumPy 
+# Function to calculate the cross product (ccw test) of three points p1, p2, p3 using NumPy
+
+
 def ccwNP(p1, p2, p3):
     p1 = np.array(p1)
     p2 = np.array(p2)
@@ -114,12 +118,14 @@ def ccwNP(p1, p2, p3):
     return np.cross(p2 - p1, p3 - p1)
 
 # Function to calculate the cross product (ccw test) of three points p1, p2, p3
+
+
 def ccw(p1, p2, p3):
     return (p2[0] - p1[0]) * (p3[1] - p1[1]) - (p2[1] - p1[1]) * (p3[0] - p1[0])
 
 
 # Graham Scan implementation
-def  graham_scan(points_input):
+def graham_scan(points_input):
     # Copy and sort the points by x-coordinate, and by y-coordinate in case of a tie
     points_sorted = sorted(points_input, key=lambda p: (p[0], p[1]))
 
@@ -136,13 +142,22 @@ def  graham_scan(points_input):
         draw_scan_line(p[0])
         # Add point to the lower hull
         while len(lower) >= 2 and ccw(lower[-2], lower[-1], p) <= 0:
+            # If the last two points and the current point do not make a counter-clockwise turn,
+            # remove the last point from the lower hull
             lower.pop()
+            # Draw the current state of the partial hull
             draw_partial_hull(lower + upper)
+            # Update the canvas to reflect changes
             canvas.update()
-            time.sleep(0.2)
+            # Pause for a short duration to visualize the process
+            time.sleep(delay_var.get())
+        # Add the current point to the lower hull
         lower.append(p)
+        # Draw the current state of the partial hull
         draw_partial_hull(lower + upper)
+        # Update the canvas to reflect changes
         canvas.update()
+        # Pause for a short duration to visualize the process
         time.sleep(delay_var.get())
 
     # Process the points for the upper part of the hull
@@ -209,43 +224,49 @@ def draw_scan_line(x_pos):
 # Jarvis' March algorithm implementation
 def jarvis_march(points_input):
     # Copy the list to avoid modifying the original
-    S = points_input.copy()
-    n = len(S)
+    all_points = points_input.copy()
+    n = len(all_points)
 
     # Find the leftmost point
-    leftmost = min(S, key=lambda p: p[0])
+    leftmost = min(all_points, key=lambda p: p[0])
     point_on_hull = leftmost
     hull = []
 
+    # Clear previous hull and scan line visualizations
     canvas.delete("hull_line")
     canvas.delete("scan_line")
-
+    # Initialize the loop counter
     i = 0
     while True:
+        # Add the current point on the hull to the hull list
         hull.append(point_on_hull)
-        endpoint = S[0]
+        # Start with the first point as the endpoint
+        endpoint = all_points[0]
 
-        # Visualize current point_on_hull
+        # Visualize the current point on the hull
         canvas.delete("current_point")
         x, y = point_on_hull
+        # Draw a circle around the current point in orange
         canvas.create_oval(x - 5, y - 5, x + 5, y + 5,
                            outline='orange', width=2, tags="current_point")
         canvas.update()
         time.sleep(delay_var.get())
 
+        # Iterate through all points to find the most counterclockwise point
         for j in range(1, n):
             # If endpoint is the same as point_on_hull or S[j] is more counterclockwise
-            if endpoint == point_on_hull or ccw(point_on_hull, endpoint, S[j]) < 0:
-                endpoint = S[j]
+            if endpoint == point_on_hull or ccw(point_on_hull, endpoint, all_points[j]) < 0:
+                # Update the endpoint to the new candidate
+                endpoint = all_points[j]
 
-                # Visualize potential endpoint
+                # Visualize the potential endpoint
                 canvas.delete("candidate_line")
                 canvas.create_line(point_on_hull[0], point_on_hull[1], endpoint[0], endpoint[1], fill='gray', dash=(
                     4, 2), tags="candidate_line")
                 canvas.update()
                 time.sleep(delay_var.get())
 
-        # Remove candidate line visualization
+        # Remove the candidate line visualization
         canvas.delete("candidate_line")
 
         # Visualize the edge added to the hull
@@ -254,10 +275,13 @@ def jarvis_march(points_input):
         canvas.update()
         time.sleep(delay_var.get())
 
+        # Move to the next point on the hull
         point_on_hull = endpoint
 
+        # If we have returned to the starting point, the hull is complete
         if endpoint == hull[0]:
             break
+        # Increment the loop counter
         i += 1
 
     # Draw the final convex hull
