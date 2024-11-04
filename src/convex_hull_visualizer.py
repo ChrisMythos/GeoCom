@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 import time
+import numpy as np
 
 # Create the main application window
 root = tk.Tk()
@@ -55,13 +56,13 @@ delay_slider = tk.Scale(
 delay_slider.pack()
 
 # Function to compute the convex hull using the selected algorithm
-
-
 def compute_convex_hull():
+    # Check if there are enough points to compute the convex hull
     if len(points) < 3:
         messagebox.showerror(
             "Error", "At least 3 points are required to compute a convex hull.")
         return
+    # Get the selected algorithm from the radio buttons
     algo = selected_algorithm.get()
     if algo == "Graham Scan":
         graham_scan(points)
@@ -105,6 +106,12 @@ def add_point(event):
 # Bind the left mouse button click event to the canvas
 canvas.bind("<Button-1>", add_point)
 
+# Function to calculate the cross product (ccw test) of three points p1, p2, p3 using NumPy 
+def ccwNP(p1, p2, p3):
+    p1 = np.array(p1)
+    p2 = np.array(p2)
+    p3 = np.array(p3)
+    return np.cross(p2 - p1, p3 - p1)
 
 # Function to calculate the cross product (ccw test) of three points p1, p2, p3
 def ccw(p1, p2, p3):
@@ -112,7 +119,7 @@ def ccw(p1, p2, p3):
 
 
 # Graham Scan implementation
-def graham_scan(points_input):
+def  graham_scan(points_input):
     # Copy and sort the points by x-coordinate, and by y-coordinate in case of a tie
     points_sorted = sorted(points_input, key=lambda p: (p[0], p[1]))
 
@@ -144,14 +151,23 @@ def graham_scan(points_input):
         draw_scan_line(p[0])
         # Add point to the upper hull
         while len(upper) >= 2 and ccw(upper[-2], upper[-1], p) <= 0:
+            # If the last two points and the current point do not make a counter-clockwise turn,
+            # remove the last point from the upper hull
             upper.pop()
+            # Draw the current state of the partial hull
             draw_partial_hull(lower + upper)
+            # Update the canvas to reflect changes
             canvas.update()
-            time.sleep(0.2)
+            # Pause for a short duration to visualize the process
+            time.sleep(delay_var.get())
+        # Add the current point to the upper hull
         upper.append(p)
+        # Draw the current state of the partial hull
         draw_partial_hull(lower + upper)
+        # Update the canvas to reflect changes
         canvas.update()
-        time.sleep(0.2)
+        # Pause for a short duration to visualize the process
+        time.sleep(delay_var.get())
 
     # Concatenate lower and upper to get the full hull
     full_hull = lower[:-1] + upper[:-1]
