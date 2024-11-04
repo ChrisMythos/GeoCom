@@ -8,7 +8,7 @@ root = tk.Tk()
 root.title("Convex Hull Visualizer")
 
 # Set the window size
-root.geometry("800x600")
+root.geometry("1000x800")
 
 # Configure the grid layout (2 columns, 1 row)
 root.grid_columnconfigure(0, weight=0)  # Sidebar column does not expand
@@ -247,8 +247,8 @@ def jarvis_march(points_input):
     while True:
         # Add the current point on the hull to the hull list
         hull.append(point_on_hull)
-        # Start with the first point as the endpoint
-        endpoint = all_points[0]
+        # Start with the first point as the endpoint_canidate
+        endpoint_canidate = all_points[0]
 
         # Visualize the current point on the hull
         canvas.delete("current_point")
@@ -261,14 +261,14 @@ def jarvis_march(points_input):
 
         # Iterate through all points to find the most counterclockwise point
         for j in range(1, n):
-            # If endpoint is the same as point_on_hull or S[j] is more counterclockwise
-            if endpoint == point_on_hull or ccw(point_on_hull, endpoint, all_points[j]) < 0:
-                # Update the endpoint to the new candidate
-                endpoint = all_points[j]
+            # If endpoint_canidate is the same as point_on_hull or S[j] is more counterclockwise than the current endpoint_canidate
+            if endpoint_canidate == point_on_hull or ccw(point_on_hull, endpoint_canidate, all_points[j]) < 0:
+                # Update the endpoint_canidate to the new candidate
+                endpoint_canidate = all_points[j]
 
-                # Visualize the potential endpoint
+                # Visualize the potential endpoint_canidate
                 canvas.delete("candidate_line")
-                canvas.create_line(point_on_hull[0], point_on_hull[1], endpoint[0], endpoint[1], fill='gray', dash=(
+                canvas.create_line(point_on_hull[0], point_on_hull[1], endpoint_canidate[0], endpoint_canidate[1], fill='gray', dash=(
                     4, 2), tags="candidate_line")
                 canvas.update()
                 time.sleep(delay_var.get())
@@ -277,16 +277,16 @@ def jarvis_march(points_input):
         canvas.delete("candidate_line")
 
         # Visualize the edge added to the hull
-        canvas.create_line(point_on_hull[0], point_on_hull[1], endpoint[0],
-                           endpoint[1], fill='blue', width=2, tags="hull_line")
+        canvas.create_line(point_on_hull[0], point_on_hull[1], endpoint_canidate[0],
+                           endpoint_canidate[1], fill='blue', width=2, tags="hull_line")
         canvas.update()
         time.sleep(delay_var.get())
 
         # Move to the next point on the hull
-        point_on_hull = endpoint
+        point_on_hull = endpoint_canidate
 
         # If we have returned to the starting point, the hull is complete
-        if endpoint == hull[0]:
+        if endpoint_canidate == hull[0]:
             break
         # Increment the loop counter
         iterations += 1
