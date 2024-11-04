@@ -115,6 +115,19 @@ def ccwNP(p1, p2, p3):
 
 # Function to calculate the cross product (ccw test) of three points p1, p2, p3
 def ccw(p1, p2, p3):
+    """
+    Determines if three points make a counter-clockwise turn.
+
+    Args:
+        p1 (tuple): The first point as a tuple (x, y).
+        p2 (tuple): The second point as a tuple (x, y).
+        p3 (tuple): The third point as a tuple (x, y).
+
+    Returns:
+        int: A positive value if the points make a counter-clockwise turn,
+             a negative value if they make a clockwise turn,
+             and zero if the points are collinear.
+    """
     return (p2[0] - p1[0]) * (p3[1] - p1[1]) - (p2[1] - p1[1]) * (p3[0] - p1[0])
 
 
