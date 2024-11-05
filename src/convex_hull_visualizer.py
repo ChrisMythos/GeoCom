@@ -113,8 +113,8 @@ def ccwNP(p1, p2, p3):
     return np.cross(np.array(p2) - np.array(p1), np.array(p3) - np.array(p1))
 
 
-# Function to calculate the cross product (ccw test) of three points p1, p2, p3
-def ccw(p1, p2, p3):
+# Function to calculate the cross product (ccw test) of three points p1, p2, p3 only last coordiates the rest are 0 revisit before exam
+def determine_point_orientation(p1, p2, p3):
     """
     Determines if three points make a counter-clockwise turn.
 
@@ -144,11 +144,11 @@ def graham_scan(points_input):
     canvas.delete("scan_line")
 
     # Process the points for the lower part of the hull
-    for i, p in enumerate(points_sorted):
+    for p in points_sorted:
         # Draw the scan line at the current x-coordinate
         draw_scan_line(p[0])
         # Add point to the lower hull
-        while len(lower) >= 2 and ccw(lower[-2], lower[-1], p) <= 0:
+        while len(lower) >= 2 and determine_point_orientation(lower[-2], lower[-1], p) <= 0:
             # If the last two points and the current point do not make a counter-clockwise turn,
             # remove the last point from the lower hull
             lower.pop()
@@ -167,12 +167,12 @@ def graham_scan(points_input):
         # Pause for a short duration to visualize the process
         time.sleep(delay_var.get())
 
-    # Process the points for the upper part of the hull
-    for i, p in enumerate(reversed(points_sorted)):
+    # Process the points for the upper part of the hull in reverse order
+    for p in reversed(points_sorted):
         # Draw the scan line at the current x-coordinate
         draw_scan_line(p[0])
         # Add point to the upper hull
-        while len(upper) >= 2 and ccw(upper[-2], upper[-1], p) <= 0:
+        while len(upper) >= 2 and determine_point_orientation(upper[-2], upper[-1], p) <= 0:
             # If the last two points and the current point do not make a counter-clockwise turn,
             # remove the last point from the upper hull
             upper.pop()
@@ -261,8 +261,8 @@ def jarvis_march(points_input):
 
         # Iterate through all points to find the most counterclockwise point
         for j in range(1, n):
-            # If endpoint_canidate is the same as point_on_hull or S[j] is more counterclockwise than the current endpoint_canidate
-            if endpoint_canidate == point_on_hull or ccw(point_on_hull, endpoint_canidate, all_points[j]) < 0:
+            # If endpoint_canidate is the same as point_on_hull or all_points[j] is more counterclockwise than the current endpoint_canidate
+            if endpoint_canidate == point_on_hull or determine_point_orientation(point_on_hull, endpoint_canidate, all_points[j]) < 0:
                 # Update the endpoint_canidate to the new candidate
                 endpoint_canidate = all_points[j]
 
