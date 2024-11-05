@@ -2,6 +2,35 @@ import tkinter as tk
 from tkinter import messagebox
 import time
 import numpy as np
+import heapq
+
+# Data classes for the event queue, points, and line segments (maybe move to a separate file)
+from dataclasses import dataclass, field
+from typing import Any
+
+
+@dataclass(order=True)
+class Event:
+    x: float
+    point: Any = field(compare=False)
+    segments: Any = field(compare=False)
+    # 'left', 'right', or 'intersection'
+    event_type: str = field(compare=False)
+
+
+@dataclass
+class Point:
+    x: float
+    y: float
+
+
+@dataclass
+class Segment:
+    left: Point
+    right: Point
+    index: int  # To identify the segment
+# ------------------------------------------------------------
+
 
 # Create the main application window
 root = tk.Tk()
@@ -57,29 +86,54 @@ reset_button.pack(pady=5)
 canvas = tk.Canvas(root, bg='white')
 canvas.grid(row=0, column=1, sticky="nsew")
 
-# store the line segments
+
+# store all line segments
 line_segments = []
+segment_index = 0  # To assign a unique index to each segment
+
 
 # store all points
 points = []
 
 
-# Function to handle mouse clicks on the canvas add a point and draw a line after two points are added
 def add_point(event):
+    global segment_index
     x, y = event.x, event.y
     radius = 4
     canvas.create_oval(x - radius, y - radius, x + radius,
                        y + radius, fill='black', tags="point")
-    points.append((x, y))
+    points.append(Point(x, y))
     if len(points) == 2:
-        canvas.create_line(points[0][0], points[0][1], points[1][0],
-                           points[1][1], fill='black', tags="line_segment")
-        line_segments.append((points[0], points[1]))
+        p1, p2 = points
+        # Ensure left to right ordering
+        if p1.x <= p2.x:
+            left, right = p1, p2
+        else:
+            left, right = p2, p1
+        segment = Segment(left, right, segment_index)
+        segment_index += 1
+        line_segments.append(segment)
+        # Draw the line
+        canvas.create_line(left.x, left.y, right.x,
+                           right.y, fill='blue', tags="line_segment")
         points.clear()
 
 
 # bind the mouse click event to the canvas
 canvas.bind("<Button-1>", add_point)
+
+
+event_queue = []
+
+
+def initialize_event_queue():
+    for segment in line_segments:
+        # Left endpoint event
+        heapq.heappush(event_queue, Event(
+            segment.left.x, segment.left, [segment], 'left'))
+        # Right endpoint event
+        heapq.heappush(event_queue, Event(
+            segment.right.x, segment.right, [segment], 'right'))
 
 
 # Start the Tkinter event loop
