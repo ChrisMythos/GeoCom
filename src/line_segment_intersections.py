@@ -3,6 +3,7 @@ from tkinter import messagebox
 import time
 import numpy as np
 import heapq
+import sortedcontainers as sc
 
 # Data classes for the event queue, points, and line segments (maybe move to a separate file)
 from dataclasses import dataclass, field
@@ -126,12 +127,13 @@ canvas.bind("<Button-1>", add_point)
 event_queue = []
 
 
+# initialize the event queue with left and right endpoints events (start and end events for all line segments)
 def initialize_event_queue():
     for segment in line_segments:
-        # Left endpoint event
+        # Left endpoint event (start event)
         heapq.heappush(event_queue, Event(
             segment.left.x, segment.left, [segment], 'left'))
-        # Right endpoint event
+        # Right endpoint event (end event)
         heapq.heappush(event_queue, Event(
             segment.right.x, segment.right, [segment], 'right'))
 
