@@ -5,6 +5,8 @@ import numpy as np
 import heapq
 import sortedcontainers as sc
 
+
+# ------------------------------------------------------------
 # Data classes for the event queue, points, and line segments (maybe move to a separate file)
 from dataclasses import dataclass, field
 from typing import Any
@@ -77,11 +79,29 @@ delay_slider.pack()
 def reset_canvas():
     canvas.delete("all")
     points.clear()
+    line_segments.clear()
+    event_queue.clear()
 
 
 # Reset button
 reset_button = tk.Button(sidebar, text="Reset", command=reset_canvas)
 reset_button.pack(pady=5)
+
+
+# Function to compute the intersections of line segments
+def start_compuation():
+    if len(line_segments) < 2:
+        messagebox.showerror(
+            "Error", "Please draw at least two line segments.")
+        return
+
+    compute_intersections()
+
+
+# Start calculation button
+start_button = tk.Button(sidebar, text="Start", command=start_compuation)
+start_button.pack(pady=5)
+
 
 # Create the canvas for drawing line segments
 canvas = tk.Canvas(root, bg='white')
@@ -123,7 +143,7 @@ def add_point(event):
 # bind the mouse click event to the canvas
 canvas.bind("<Button-1>", add_point)
 
-
+# Event queue to store all the events
 event_queue = []
 
 
@@ -136,6 +156,34 @@ def initialize_event_queue():
         # Right endpoint event (end event)
         heapq.heappush(event_queue, Event(
             segment.right.x, segment.right, [segment], 'right'))
+
+
+# Sweep line to process the events
+sweep_line = sc.SortedList(key=lambda s: get_y(s, current_x))
+current_x = 0  # Global variable to keep track of the sweep line position
+
+
+# Compute the y-coordinate of the segment at position x
+def get_y(segment, x):
+    x1, y1 = segment.left.x, segment.left.y  # Left endpoint
+    x2, y2 = segment.right.x, segment.right.y  # Right endpoint
+    # Handle vertical lines ( x1 and x2 are the same) to avoid division by zero
+    if x1 == x2:
+        return y1
+    # Compute the y-coordinate of the segment at position x with linear interpolation (generate a line equation between two points and find the y-coordinate at x)
+    slope = (y2 - y1) / (x2 - x1)
+    return y1 + slope * (x - x1)
+
+
+# Function to compute the intersections of line segments
+def compute_intersections():
+    # Initialize the event queue
+    initialize_event_queue()
+    # Add your intersection computation logic here
+    while event_queue:
+        event = heapq.heappop(event_queue)
+        # Process the event
+        print(f"Processing event: {event}")
 
 
 # Start the Tkinter event loop
