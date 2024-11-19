@@ -4,6 +4,11 @@ import heapq
 from dataclasses import dataclass, field
 from typing import Any
 
+# TODO SSS Datastructure redo to implement a balanced binary search tree with successor and predecessor functions
+# to make sure the segments are sorted in the SSS and when a segment is intersected multiple times, it is removed
+# from the SSS and reinserted at the correct position in the SSS
+
+
 # Create the main application window
 root = tk.Tk()
 root.title("Line Segment Intersections")
@@ -262,7 +267,9 @@ def handle_intersection_event(event, intersections):
 
 def check_and_add_intersection(s1, s2):
     point = compute_intersection(s1, s2)
+    # Check if the intersection point is valid and to the right of the current scan line
     if point and point.x >= current_x:
+        # Create an intersection event and add it to the event queue
         event = Event(point.x, 1, point, event_type='intersection',
                       segment_up=s1, segment_low=s2)
         heapq.heappush(event_queue, event)
@@ -294,12 +301,15 @@ def compute_intersection(s1, s2):
 
 
 def get_segment_y_at_x(segment, x):
+    # Get the y-coordinate of the segment at the given x-coordinate
     p1, p2 = segment.start, segment.end
+    # Handle vertical lines
     if p1.x == p2.x:
         return p1.y
     else:
-        m = (p2.y - p1.y) / (p2.x - p1.x)
-        return m * (x - p1.x) + p1.y
+        # Calculate the slope and use it to find the y-coordinate
+        slope = (p2.y - p1.y) / (p2.x - p1.x)
+        return slope * (x - p1.x) + p1.y
 
 
 def draw_intersection_point(point):
