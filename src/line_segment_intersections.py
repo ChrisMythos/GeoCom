@@ -42,9 +42,8 @@ delay_slider = tk.Scale(
 )
 delay_slider.pack()
 
-# Reset button
 
-
+# Reset button function
 def reset_canvas():
     global segment_index, scan_line_id
     canvas.delete("all")
@@ -56,12 +55,13 @@ def reset_canvas():
     scan_line_id = None
 
 
-reset_button = tk.Button(sidebar, text="Reset", command=reset_canvas)
+# Reset button on sidebar
+reset_button = tk.Button(sidebar, text="Reset",
+                         command=reset_canvas, background='lightgray')
 reset_button.pack(pady=5)
 
+
 # Compute Intersections button
-
-
 def start_computing():
     canvas.update_idletasks()  # Ensure the canvas has the correct size
     initialize_event_queue()
@@ -90,6 +90,8 @@ sss = []
 scan_line_id = None
 
 
+# ------------------------------------------------------------
+# Data classes for Point, Segment, and Event
 @dataclass
 class Point:
     x: float
@@ -107,14 +109,17 @@ class Segment:
 @dataclass(order=True)
 class Event:
     x: float
-    event_order: int           # Event priority for ordering
+    # Event priority for ordering (0=start, 1=intersection, 2=end)
+    event_order: int
     point: Point = field(compare=False)
     event_type: str = field(compare=False)
     segment: Any = field(compare=False, default=None)
     segment_up: Any = field(compare=False, default=None)
     segment_low: Any = field(compare=False, default=None)
+# ------------------------------------------------------------
 
 
+# Function to add a point to the canvas and make a segment if two points are present
 def add_point(event):
     global segment_index
     x, y = event.x, event.y
@@ -126,12 +131,13 @@ def add_point(event):
         segment_index += 1
         # Draw the line and store its canvas ID
         canvas_id = canvas.create_line(
-            start.x, start.y, end.x, end.y, fill='black', tags="segment")
+            start.x, start.y, end.x, end.y, fill='blue', tags="segment")
         segment.canvas_id = canvas_id
         segments.append(segment)
         points.clear()
 
 
+# Function to initialize the event queue with start and end events for all segments
 def initialize_event_queue():
     event_queue.clear()
     for segment in segments:
@@ -146,6 +152,7 @@ def initialize_event_queue():
                        segment.end, event_type='end', segment=segment))
 
 
+# Function to process the events in the event queue and handle each event type
 def process_events():
     global current_x, scan_line_id
     intersections = []
@@ -184,7 +191,7 @@ def draw_scan_line(x):
         canvas.delete(scan_line_id)
     # Draw the new scan line
     scan_line_id = canvas.create_line(
-        x, 0, x, canvas.winfo_height(), fill='blue', dash=(4, 2), width=2)
+        x, 0, x, canvas.winfo_height(), fill='black', dash=(4, 2), width=2)
 
 
 def handle_start_event(event, intersections):
