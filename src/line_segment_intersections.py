@@ -31,7 +31,7 @@ delay_label = tk.Label(
 delay_label.pack(pady=5)
 
 # Delay Slider
-delay_var = tk.DoubleVar(value=0.2)  # Default delay time
+delay_var = tk.DoubleVar(value=0.1)  # Default delay time
 delay_slider = tk.Scale(
     sidebar,
     from_=0.0,
@@ -46,13 +46,14 @@ delay_slider.pack()
 
 
 def reset_canvas():
-    global segment_index
+    global segment_index, scan_line_id
     canvas.delete("all")
     points.clear()
     segments.clear()
     event_queue.clear()
     sss.clear()
     segment_index = 0
+    scan_line_id = None
 
 
 reset_button = tk.Button(sidebar, text="Reset", command=reset_canvas)
@@ -62,6 +63,7 @@ reset_button.pack(pady=5)
 
 
 def start_computing():
+    canvas.update_idletasks()  # Ensure the canvas has the correct size
     initialize_event_queue()
     process_events()
 
@@ -84,6 +86,9 @@ event_queue = []
 current_x = 0  # Global variable to keep track of the scan line position
 sss = []
 
+# Canvas item ID for the scan line
+scan_line_id = None
+
 
 @dataclass
 class Point:
@@ -96,13 +101,15 @@ class Segment:
     start: Point
     end: Point
     index: int
+    canvas_id: int = field(default=None, compare=False)
 
 
 @dataclass(order=True)
 class Event:
     x: float
-    event_type: str
-    point: Point
+    event_order: int           # Event priority for ordering
+    point: Point = field(compare=False)
+    event_type: str = field(compare=False)
     segment: Any = field(compare=False, default=None)
     segment_up: Any = field(compare=False, default=None)
     segment_low: Any = field(compare=False, default=None)
@@ -117,10 +124,11 @@ def add_point(event):
         start, end = points
         segment = Segment(start, end, segment_index)
         segment_index += 1
+        # Draw the line and store its canvas ID
+        canvas_id = canvas.create_line(
+            start.x, start.y, end.x, end.y, fill='black', tags="segment")
+        segment.canvas_id = canvas_id
         segments.append(segment)
-        # Draw the line
-        canvas.create_line(start.x, start.y, end.x, end.y,
-                           fill='black', tags="segment")
         points.clear()
 
 
@@ -130,20 +138,23 @@ def initialize_event_queue():
         # Ensure left to right ordering
         if segment.start.x > segment.end.x:
             segment.start, segment.end = segment.end, segment.start
-        # Add start event
-        heapq.heappush(event_queue, Event(segment.start.x,
-                       'start', segment.start, segment=segment))
-        # Add end event
-        heapq.heappush(event_queue, Event(
-            segment.end.x, 'end', segment.end, segment=segment))
+        # Add start event with event_order = 0
+        heapq.heappush(event_queue, Event(segment.start.x, 0,
+                       segment.start, event_type='start', segment=segment))
+        # Add end event with event_order = 2
+        heapq.heappush(event_queue, Event(segment.end.x, 2,
+                       segment.end, event_type='end', segment=segment))
 
 
 def process_events():
-    global current_x
+    global current_x, scan_line_id
     intersections = []
     while event_queue:
         event = heapq.heappop(event_queue)
         current_x = event.x
+
+        # Draw or update the scan line
+        draw_scan_line(current_x)
 
         # Re-sort SSS based on current_x
         sss.sort(key=lambda s: get_segment_y_at_x(s, current_x))
@@ -156,7 +167,24 @@ def process_events():
             handle_intersection_event(event, intersections)
         else:
             raise ValueError(f"Unknown event type: {event.event_type}")
-    return intersections
+
+        # Add a small delay for visualization
+        canvas.update()
+        time.sleep(delay_var.get())
+
+    # Remove the scan line after processing is complete
+    if scan_line_id is not None:
+        canvas.delete(scan_line_id)
+
+
+def draw_scan_line(x):
+    global scan_line_id
+    # Remove the previous scan line if it exists
+    if scan_line_id is not None:
+        canvas.delete(scan_line_id)
+    # Draw the new scan line
+    scan_line_id = canvas.create_line(
+        x, 0, x, canvas.winfo_height(), fill='blue', dash=(4, 2), width=2)
 
 
 def handle_start_event(event, intersections):
@@ -164,6 +192,9 @@ def handle_start_event(event, intersections):
     sss.append(segment)
     sss.sort(key=lambda s: get_segment_y_at_x(s, current_x))
     idx = sss.index(segment)
+
+    # Change the color of the segment to green
+    canvas.itemconfig(segment.canvas_id, fill='green')
 
     pred_segment = sss[idx - 1] if idx > 0 else None
     succ_segment = sss[idx + 1] if idx + 1 < len(sss) else None
@@ -177,6 +208,9 @@ def handle_start_event(event, intersections):
 def handle_end_event(event, intersections):
     segment = event.segment
     idx = sss.index(segment)
+
+    # Change the color of the segment back to black
+    canvas.itemconfig(segment.canvas_id, fill='black')
 
     pred_segment = sss[idx - 1] if idx > 0 else None
     succ_segment = sss[idx + 1] if idx + 1 < len(sss) else None
@@ -222,11 +256,9 @@ def handle_intersection_event(event, intersections):
 def check_and_add_intersection(s1, s2):
     point = compute_intersection(s1, s2)
     if point and point.x >= current_x:
-        event = Event(point.x, 'intersection', point,
+        event = Event(point.x, 1, point, event_type='intersection',
                       segment_up=s1, segment_low=s2)
-        # Avoid adding duplicate events
-        if event not in event_queue:
-            heapq.heappush(event_queue, event)
+        heapq.heappush(event_queue, event)
 
 
 def compute_intersection(s1, s2):
@@ -267,8 +299,7 @@ def draw_intersection_point(point):
     x, y = point.x, point.y
     canvas.create_oval(x - 4, y - 4, x + 4, y + 4,
                        fill='red', tags="intersection")
-    canvas.update()
-    time.sleep(delay_var.get())
+    # No need to update or sleep here
 
 
 # Bind the mouse click event to the canvas
