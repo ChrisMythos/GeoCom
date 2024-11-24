@@ -319,7 +319,7 @@ def compute_intersection(s1, s2):
     x = num_x / m
     y = num_y / m
 
-    # Check if the intersection point is within both segments (with a small epsilon)
+    # Check if the intersection point is within both segments (with a small epsilon to avoid precision errors)
     if (min(p1.x, p2.x) - epsilon <= x <= max(p1.x, p2.x) + epsilon and
         min(p3.x, p4.x) - epsilon <= x <= max(p3.x, p4.x) + epsilon and
         min(p1.y, p2.y) - epsilon <= y <= max(p1.y, p2.y) + epsilon and
