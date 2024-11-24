@@ -115,7 +115,7 @@ class Segment:
 class Event:
     x: float
     # Event priority for ordering (0=start, 1=intersection, 2=end)
-    event_order: int
+    event_order: int = field(compare=True)
     point: Point = field(compare=False)
     event_type: str = field(compare=False)
     segment: Any = field(compare=False, default=None)
