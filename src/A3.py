@@ -17,8 +17,7 @@ class Node:
         self.point = point    # Punkt an diesem Knoten
         self.left = left      # Linker Teilbaum
         self.right = right    # Rechter Teilbaum
-        # Aktuelle Achse: 0 für x, 1 für y (direction aus Vorlesung)
-        self.axis = axis
+        self.axis = axis      # Aktuelle Achse: 0 für x, 1 für y
 
 
 # Hauptfenster erstellen
@@ -42,6 +41,39 @@ heading_text = tk.Label(
     sidebar, text="2D-Baum Konstruktion", font=("Arial", 18), bg='lightgray', fg='black')
 heading_text.pack(pady=5)
 
+# Slider für die Anzahl der Punkte
+point_count_slider = tk.Scale(
+    sidebar,
+    from_=10,
+    to=1000,
+    orient=tk.HORIZONTAL,
+    label='Anzahl der Punkte',
+    length=150
+)
+point_count_slider.set(20)  # Standardwert setzen
+point_count_slider.pack(pady=5)
+
+# Modusauswahl hinzufügen
+mode_var = tk.StringVar(value='add')
+
+mode_label = tk.Label(sidebar, text="Modus auswählen:", bg='lightgray')
+mode_label.pack(pady=(10, 0))
+
+mode_frame = tk.Frame(sidebar, bg='lightgray')
+mode_frame.pack(pady=5)
+
+add_radio = tk.Radiobutton(
+    mode_frame, text="Punkte hinzufügen", variable=mode_var, value='add', bg='lightgray')
+add_radio.pack(anchor='w')
+
+move_radio = tk.Radiobutton(
+    mode_frame, text="Punkte verschieben", variable=mode_var, value='move', bg='lightgray')
+move_radio.pack(anchor='w')
+
+range_radio = tk.Radiobutton(
+    mode_frame, text="Bereichssuche", variable=mode_var, value='range', bg='lightgray')
+range_radio.pack(anchor='w')
+
 # Canvas zum Zeichnen erstellen
 canvas = tk.Canvas(root, bg='white')
 canvas.grid(row=0, column=1, sticky="nsew")
@@ -52,15 +84,15 @@ point_objs = []        # Liste der Canvas-Objekte der Punkte
 root_node = None       # Wurzel des 2D-Baums
 lines = []             # Liste der gezeichneten Partitionierungslinien
 selected_point = None  # Zum Verschieben ausgewählter Punkt
-search_rect = None     # Suchrechteck
+search_rect_coords = []    # Koordinaten für den Suchbereich
 found_points = []      # Gefundene Punkte im Suchbereich
 search_rectangle = None  # Gezeichnetes Suchrechteck
 
 
 def preprocessing(points):
     """Sortiert die Punkte nach x- und y-Koordinaten."""
-    points_sorted_x = sorted(points, key=lambda point: point.x)
-    points_sorted_y = sorted(points, key=lambda point: point.y)
+    points_sorted_x = sorted(points, key=lambda point: (point.x, point.y))
+    points_sorted_y = sorted(points, key=lambda point: (point.y, point.x))
     return points_sorted_x, points_sorted_y
 
 
@@ -87,9 +119,21 @@ def clear_canvas():
     lines.clear()
 
 
-def create_point(event):
-    """Erstellt einen Punkt an der geklickten Position."""
+def canvas_click(event):
+    """Verarbeitet Klicks auf dem Canvas basierend auf dem ausgewählten Modus."""
+    mode = mode_var.get()
     x, y = event.x, event.y
+
+    if mode == 'add':
+        add_point(x, y)
+    elif mode == 'move':
+        move_point_click(x, y)
+    elif mode == 'range':
+        range_selection_click(x, y)
+
+
+def add_point(x, y):
+    """Fügt einen Punkt hinzu."""
     point = Point(x, y)
     points.append(point)
     obj = canvas.create_oval(x-3, y-3, x+3, y+3, fill='black')
@@ -97,38 +141,81 @@ def create_point(event):
     build_tree_and_draw()
 
 
+def move_point_click(x, y):
+    """Verarbeitet Klicks im Verschiebemodus."""
+    global selected_point
+
+    if selected_point is None:
+        # Überprüfen, ob ein Punkt angeklickt wurde
+        for obj, point in point_objs:
+            coords = canvas.coords(obj)
+            if coords[0] <= x <= coords[2] and coords[1] <= y <= coords[3]:
+                selected_point = (obj, point)
+                # Punkt hervorheben
+                canvas.itemconfig(obj, outline='green', width=2)
+                break
+    else:
+        # Punkt an neue Position bewegen
+        obj, point = selected_point
+        canvas.coords(obj, x-3, y-3, x+3, y+3)
+        point.x = x
+        point.y = y
+        # Hervorhebung entfernen
+        canvas.itemconfig(obj, outline='', width=1)
+        selected_point = None
+        build_tree_and_draw()
+
+
+def range_selection_click(x, y):
+    """Verarbeitet Klicks im Bereichssuchmodus."""
+    global search_rect_coords, search_rectangle
+
+    if len(search_rect_coords) == 0:
+        # Erster Klick - erste Ecke speichern
+        search_rect_coords = [x, y]
+        # Vorheriges Suchrechteck entfernen
+        if search_rectangle:
+            canvas.delete(search_rectangle)
+            search_rectangle = None
+    else:
+        # Zweiter Klick - zweite Ecke speichern und Suche durchführen
+        search_rect_coords.extend([x, y])
+        x0, y0, x1, y1 = search_rect_coords
+        # Suchrechteck zeichnen
+        search_rectangle = canvas.create_rectangle(
+            x0, y0, x1, y1, outline='green', dash=(2, 2))
+        perform_range_search(min(x0, x1), min(
+            y0, y1), max(x0, x1), max(y0, y1))
+        # Koordinaten zurücksetzen
+        search_rect_coords = []
+
+
 def build_tree_and_draw():
     """Erstellt den 2D-Baum und zeichnet die Partitionierung."""
     global root_node
-    # wenn keine Punkte vorhanden sind, wird der Baum nicht erstellt
     if not points:
         return
-    # Punkte sortieren (preprocessing)
     points_sorted_x, points_sorted_y = preprocessing(points)
-    # Baum erstellen
     root_node = construct_balanced_2d_tree(
         points_sorted_x, points_sorted_y, depth=0)
-
     clear_partition_lines()
     draw_partition(root_node, 0, 0, 0, canvas.winfo_width(),
                    canvas.winfo_height())
 
 
 def construct_balanced_2d_tree(points_sorted_x, points_sorted_y, depth):
-    """Konstruiert rekursiv einen balancierten 2D-Baum."""
-    # Abbruchbedingung: Leere Liste
+    """Konstruiert rekursiv einen balancierten 2D-Baum mit zusätzlichen Überprüfungen."""
     if not points_sorted_x or not points_sorted_y:
         return None
 
-    # Achse für die Partitionierung (x oder y im Wechsel)
+    if len(points_sorted_x) == 1:
+        return Node(point=points_sorted_x[0], axis=depth % 2)
+
     axis = depth % 2  # 0 für x, 1 für y
 
-    # Medianpunkt und Aufteilung der Punkte in x Richtung
     if axis == 0:
         median = len(points_sorted_x) // 2
         median_point = points_sorted_x[median]
-
-        # Erstellen der linken und rechten Teilpunkte
         left_points_x = points_sorted_x[:median]
         right_points_x = points_sorted_x[median+1:]
 
@@ -138,7 +225,6 @@ def construct_balanced_2d_tree(points_sorted_x, points_sorted_y, depth):
         right_points_y = [
             point for point in points_sorted_y if point.x > median_point.x]
 
-    # Medianpunkt und Aufteilung der Punkte in y Richtung
     else:
         median = len(points_sorted_y) // 2
         median_point = points_sorted_y[median]
@@ -151,12 +237,15 @@ def construct_balanced_2d_tree(points_sorted_x, points_sorted_y, depth):
         right_points_x = [
             point for point in points_sorted_x if point.y > median_point.y]
 
-    # Neuer Knoten mit dem Medianpunkt
+    # Zusätzliche Überprüfung, um Endlosschleifen zu vermeiden
+    if not left_points_x and not right_points_x:
+        return Node(point=median_point, axis=axis)
+
     node = Node(
         point=median_point,
         axis=axis
     )
-    # Rekursiver Aufruf für linke und rechte Teilbäume
+
     node.left = construct_balanced_2d_tree(
         left_points_x, left_points_y, depth + 1)
     node.right = construct_balanced_2d_tree(
@@ -194,64 +283,6 @@ def clear_partition_lines():
     lines.clear()
 
 
-def on_point_click(event):
-    """Wird aufgerufen, wenn auf einen Punkt geklickt wird (zum Verschieben)."""
-    global selected_point
-    x, y = event.x, event.y
-    for obj, point in point_objs:
-        coords = canvas.coords(obj)
-        if coords[0] <= x <= coords[2] and coords[1] <= y <= coords[3]:
-            selected_point = (obj, point)
-            break
-
-
-def on_point_move(event):
-    """Verschiebt den ausgewählten Punkt."""
-    global selected_point
-    if selected_point is not None:
-        obj, point = selected_point
-        x, y = event.x, event.y
-        canvas.coords(obj, x-3, y-3, x+3, y+3)
-        point.x = x
-        point.y = y
-        build_tree_and_draw()
-
-
-def on_point_release(event):
-    """Setzt den ausgewählten Punkt zurück."""
-    global selected_point
-    selected_point = None
-
-
-def start_range_selection(event):
-    """Startet die Auswahl eines Suchbereichs."""
-    global search_rect, search_rectangle
-    search_rect = (event.x, event.y)
-    if search_rectangle:
-        canvas.delete(search_rectangle)
-        search_rectangle = None
-
-
-def update_range_selection(event):
-    """Aktualisiert die Darstellung des Suchbereichs während der Auswahl."""
-    global search_rect, search_rectangle
-    if search_rect:
-        x0, y0 = search_rect
-        x1, y1 = event.x, event.y
-        if search_rectangle:
-            canvas.delete(search_rectangle)
-        search_rectangle = canvas.create_rectangle(
-            x0, y0, x1, y1, outline='green', dash=(2, 2))
-        perform_range_search(min(x0, x1), min(
-            y0, y1), max(x0, x1), max(y0, y1))
-
-
-def end_range_selection(event):
-    """Beendet die Auswahl des Suchbereichs."""
-    global search_rect
-    search_rect = None
-
-
 def perform_range_search(x_min, y_min, x_max, y_max):
     """Führt die Bereichssuche im 2D-Baum durch."""
     global found_points
@@ -265,7 +296,7 @@ def perform_range_search(x_min, y_min, x_max, y_max):
     for point in found_points:
         for obj, p in point_objs:
             if p == point:
-                canvas.itemconfig(obj, fill='orange')
+                canvas.itemconfig(obj, fill='magenta')
 
 
 def range_search(node, x_min, y_min, x_max, y_max):
@@ -296,19 +327,7 @@ def range_search(node, x_min, y_min, x_max, y_max):
 
 
 # Ereignisse binden
-canvas.bind("<Button-1>", create_point)  # Punkt hinzufügen
-# Punkt anklicken zum Verschieben
-canvas.tag_bind("point", "<Button-1>", on_point_click)
-canvas.bind("<B1-Motion>", on_point_move)  # Punkt verschieben
-canvas.bind("<ButtonRelease-1>", on_point_release)  # Verschieben beenden
-
-# Rechte Maustaste zum Starten der Bereichsauswahl
-canvas.bind("<Button-3>", start_range_selection)
-# Bereichsauswahl aktualisieren
-canvas.bind("<B3-Motion>", update_range_selection)
-# Bereichsauswahl beenden
-canvas.bind("<ButtonRelease-3>", end_range_selection)
-
+canvas.bind("<Button-1>", canvas_click)  # Klick auf dem Canvas
 
 # Buttons in der Seitenleiste
 generate_button = tk.Button(
@@ -318,19 +337,6 @@ generate_button.pack(pady=5)
 clear_button = tk.Button(
     sidebar, text="Punkte löschen", command=lambda: [points.clear(), point_objs.clear(), clear_canvas()])
 clear_button.pack(pady=5)
-
-# Schieberegler für die Anzahl der Punkte
-point_count_slider = tk.Scale(
-    sidebar,
-    from_=10,
-    to=1000,
-    orient=tk.HORIZONTAL,
-    label='Anzahl der Punkte',
-    length=150
-)
-point_count_slider.set(20)  # Standardwert setzen
-point_count_slider.pack(pady=5)
-
 
 # Hauptschleife starten
 root.mainloop()
