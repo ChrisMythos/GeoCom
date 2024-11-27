@@ -53,26 +53,28 @@ point_count_slider = tk.Scale(
 point_count_slider.set(20)  # Standardwert setzen
 point_count_slider.pack(pady=5)
 
-# Modusauswahl hinzufügen
+# Steuerungsmodus-Auswahl hinzufügen
+control_mode_var = tk.StringVar(value='normal')
+
+control_mode_label = tk.Label(sidebar, text="Steuerungsmodus:", bg='lightgray')
+control_mode_label.pack(pady=(10, 0))
+
+control_mode_frame = tk.Frame(sidebar, bg='lightgray')
+control_mode_frame.pack(pady=5)
+
+normal_control_radio = tk.Radiobutton(
+    control_mode_frame, text="Normale Maussteuerung", variable=control_mode_var, value='normal', bg='lightgray')
+normal_control_radio.pack(anchor='w')
+
+touchpad_control_radio = tk.Radiobutton(
+    control_mode_frame, text="Vereinfachte Touchpad-Steuerung", variable=control_mode_var, value='touchpad', bg='lightgray')
+touchpad_control_radio.pack(anchor='w')
+
+# Modusauswahl für Touchpad-Steuerung
 mode_var = tk.StringVar(value='add')
 
 mode_label = tk.Label(sidebar, text="Modus auswählen:", bg='lightgray')
-mode_label.pack(pady=(10, 0))
-
 mode_frame = tk.Frame(sidebar, bg='lightgray')
-mode_frame.pack(pady=5)
-
-add_radio = tk.Radiobutton(
-    mode_frame, text="Punkte hinzufügen", variable=mode_var, value='add', bg='lightgray')
-add_radio.pack(anchor='w')
-
-move_radio = tk.Radiobutton(
-    mode_frame, text="Punkte verschieben", variable=mode_var, value='move', bg='lightgray')
-move_radio.pack(anchor='w')
-
-range_radio = tk.Radiobutton(
-    mode_frame, text="Bereichssuche", variable=mode_var, value='range', bg='lightgray')
-range_radio.pack(anchor='w')
 
 # Canvas zum Zeichnen erstellen
 canvas = tk.Canvas(root, bg='white')
@@ -104,11 +106,12 @@ def generate_points():
     point_objs.clear()
     num_points = point_count_slider.get()
     for _ in range(num_points):
-        x = random.randint(50, canvas.winfo_width() - 50)
-        y = random.randint(50, canvas.winfo_height() - 50)
+        x = random.randint(10, canvas.winfo_width() - 10)
+        y = random.randint(10, canvas.winfo_height() - 10)
         point = Point(x, y)
         points.append(point)
-        obj = canvas.create_oval(x-3, y-3, x+3, y+3, fill='black')
+        obj = canvas.create_oval(
+            x-3, y-3, x+3, y+3, fill='black', tags='point')
         point_objs.append((obj, point))
     build_tree_and_draw()
 
@@ -121,6 +124,14 @@ def clear_canvas():
 
 def canvas_click(event):
     """Verarbeitet Klicks auf dem Canvas basierend auf dem ausgewählten Modus."""
+    if control_mode_var.get() == 'touchpad':
+        touchpad_canvas_click(event)
+    else:
+        normal_canvas_click(event)
+
+
+def touchpad_canvas_click(event):
+    """Klickverarbeitung im Touchpad-Modus."""
     mode = mode_var.get()
     x, y = event.x, event.y
 
@@ -132,11 +143,17 @@ def canvas_click(event):
         range_selection_click(x, y)
 
 
+def normal_canvas_click(event):
+    """Klickverarbeitung im normalen Modus."""
+    x, y = event.x, event.y
+    add_point(x, y)
+
+
 def add_point(x, y):
     """Fügt einen Punkt hinzu."""
     point = Point(x, y)
     points.append(point)
-    obj = canvas.create_oval(x-3, y-3, x+3, y+3, fill='black')
+    obj = canvas.create_oval(x-3, y-3, x+3, y+3, fill='black', tags='point')
     point_objs.append((obj, point))
     build_tree_and_draw()
 
@@ -326,8 +343,104 @@ def range_search(node, x_min, y_min, x_max, y_max):
             range_search(node.right, x_min, y_min, x_max, y_max)
 
 
-# Ereignisse binden
-canvas.bind("<Button-1>", canvas_click)  # Klick auf dem Canvas
+def on_point_press(event):
+    """Startet das Verschieben eines Punktes im normalen Modus."""
+    global selected_point
+    x, y = event.x, event.y
+    for obj, point in point_objs:
+        coords = canvas.coords(obj)
+        if coords[0] <= x <= coords[2] and coords[1] <= y <= coords[3]:
+            selected_point = (obj, point)
+            break
+
+
+def on_point_move(event):
+    """Verschiebt den ausgewählten Punkt im normalen Modus."""
+    global selected_point
+    if selected_point is not None:
+        obj, point = selected_point
+        x, y = event.x, event.y
+        canvas.coords(obj, x-3, y-3, x+3, y+3)
+        point.x = x
+        point.y = y
+        build_tree_and_draw()
+
+
+def on_point_release(event):
+    """Beendet das Verschieben eines Punktes im normalen Modus."""
+    global selected_point
+    selected_point = None
+
+
+def start_range_selection(event):
+    """Startet die Auswahl eines Suchbereichs im normalen Modus."""
+    global search_rect_coords, search_rectangle
+    search_rect_coords = [event.x, event.y]
+    if search_rectangle:
+        canvas.delete(search_rectangle)
+        search_rectangle = None
+
+
+def update_range_selection(event):
+    """Aktualisiert die Darstellung des Suchbereichs während der Auswahl im normalen Modus."""
+    global search_rect_coords, search_rectangle
+    x0, y0 = search_rect_coords
+    x1, y1 = event.x, event.y
+    if search_rectangle:
+        canvas.delete(search_rectangle)
+    search_rectangle = canvas.create_rectangle(
+        x0, y0, x1, y1, outline='green', dash=(2, 2))
+    perform_range_search(min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1))
+
+
+def end_range_selection(event):
+    """Beendet die Auswahl des Suchbereichs im normalen Modus."""
+    global search_rect_coords
+    search_rect_coords = []
+
+
+def update_control_mode(*args):
+    """Aktualisiert die Ereignisbindungen basierend auf dem Steuerungsmodus."""
+    canvas.unbind("<Button-1>")
+    canvas.unbind("<B1-Motion>")
+    canvas.unbind("<ButtonRelease-1>")
+    canvas.unbind("<Button-3>")
+    canvas.unbind("<B3-Motion>")
+    canvas.unbind("<ButtonRelease-3>")
+
+    if control_mode_var.get() == 'touchpad':
+        # Touchpad-Steuerung
+        mode_label.pack(pady=(10, 0))
+        mode_frame.pack(pady=5)
+        canvas.bind("<Button-1>", canvas_click)
+    else:
+        # Normale Maussteuerung
+        mode_label.pack_forget()
+        mode_frame.pack_forget()
+        canvas.bind("<Button-1>", on_point_press)
+        canvas.bind("<B1-Motion>", on_point_move)
+        canvas.bind("<ButtonRelease-1>", on_point_release)
+        canvas.bind("<Button-3>", start_range_selection)
+        canvas.bind("<B3-Motion>", update_range_selection)
+        canvas.bind("<ButtonRelease-3>", end_range_selection)
+
+
+# Steuerungsmodus-Auswahl aktualisieren
+control_mode_var.trace_add('write', update_control_mode)
+update_control_mode()
+
+# Modusauswahl für Touchpad-Steuerung hinzufügen
+add_radio = tk.Radiobutton(
+    mode_frame, text="Punkte hinzufügen", variable=mode_var, value='add', bg='lightgray')
+add_radio.pack(anchor='w')
+
+move_radio = tk.Radiobutton(
+    mode_frame, text="Punkte verschieben", variable=mode_var, value='move', bg='lightgray')
+move_radio.pack(anchor='w')
+
+range_radio = tk.Radiobutton(
+    mode_frame, text="Bereichssuche", variable=mode_var, value='range', bg='lightgray')
+range_radio.pack(anchor='w')
 
 # Buttons in der Seitenleiste
 generate_button = tk.Button(
