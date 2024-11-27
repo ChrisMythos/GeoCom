@@ -23,6 +23,36 @@
 
 - Rekursive Suche: Der Algorithmus durchläuft den Baum rekursiv und überprüft, ob sich Punkte oder Teilbäume innerhalb des Suchbereichs befinden.
 - Abbruchbedingung: Die Suche wird abgebrochen, wenn ein Knoten außerhalb des Suchbereichs liegt oder ein Blatt erreicht wird.
-  3 Visualisieren Sie das Ergebnis: Markieren Sie die Punkte, die innerhalb des Suchbereichs liegen.
+
+3. Visualisieren Sie das Ergebnis: Markieren Sie die Punkte, die innerhalb des Suchbereichs liegen.
+
 - Hervorhebung: Die gefundenen Punkte können z.B. in einer anderen Farbe dargestellt werden.
 - Interaktivität: Ermöglichen des Benutzers, den Suchbereich zu ändern und die resultierende Änderung der Suchergebnisse zu beobachten.
+
+# Interaktive Konstruktion eines 2D-Baums
+
+Dieses Programm ermöglicht die interaktive Konstruktion eines 2D-Baums mit Hilfe von Tkinter. Es bietet Funktionen zum Hinzufügen, Verschieben und Suchen von Punkten im 2D-Raum.
+
+## Funktionen
+
+- **Punkte hinzufügen**: Klicken Sie auf die Leinwand, um Punkte hinzuzufügen.
+- **Punkte verschieben**: Wählen Sie einen Punkt aus und klicken Sie auf eine neue Position, um ihn zu verschieben.
+- **Bereichssuche**: Zeichnen Sie ein Rechteck auf der Leinwand, um Punkte innerhalb dieses Bereichs zu suchen.
+- **Zufällige Punkte erzeugen**: Erzeugt eine angegebene Anzahl zufälliger Punkte auf der Leinwand.
+- **Punkte löschen**: Löscht alle Punkte von der Leinwand.
+
+## Installation
+
+Stellen Sie sicher, dass Sie Python 3.x installiert haben. Installieren Sie die erforderlichen Bibliotheken mit:
+
+```sh
+pip install tkinter
+```
+
+## Starten
+
+Um das Programm zu starten, führen Sie die Datei A3.py aus:
+
+```sh
+python A3.py
+```
