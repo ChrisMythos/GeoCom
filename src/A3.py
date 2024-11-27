@@ -70,7 +70,8 @@ def generate_points():
     clear_canvas()
     points.clear()
     point_objs.clear()
-    for _ in range(100):
+    num_points = point_count_slider.get()
+    for _ in range(num_points):
         x = random.randint(50, canvas.winfo_width() - 50)
         y = random.randint(50, canvas.winfo_height() - 50)
         point = Point(x, y)
@@ -308,6 +309,7 @@ canvas.bind("<B3-Motion>", update_range_selection)
 # Bereichsauswahl beenden
 canvas.bind("<ButtonRelease-3>", end_range_selection)
 
+
 # Buttons in der Seitenleiste
 generate_button = tk.Button(
     sidebar, text="Zufällige Punkte erzeugen", command=generate_points)
@@ -316,6 +318,19 @@ generate_button.pack(pady=5)
 clear_button = tk.Button(
     sidebar, text="Punkte löschen", command=lambda: [points.clear(), point_objs.clear(), clear_canvas()])
 clear_button.pack(pady=5)
+
+# Schieberegler für die Anzahl der Punkte
+point_count_slider = tk.Scale(
+    sidebar,
+    from_=10,
+    to=1000,
+    orient=tk.HORIZONTAL,
+    label='Anzahl der Punkte',
+    length=150
+)
+point_count_slider.set(20)  # Standardwert setzen
+point_count_slider.pack(pady=5)
+
 
 # Hauptschleife starten
 root.mainloop()
