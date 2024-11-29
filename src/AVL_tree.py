@@ -1,240 +1,263 @@
 class Node:
-    def __init__(self, value):
-        self.value = value
-        self.left = None
-        self.right = None
-        self.height = 1
-        self.successor = None  # In-order successor
+    def __init__(self, key, segment=None):
+        self.key = key               # y-coordinate of the segment
+        self.segment = segment       # Pointer to the line segment object
+        self.left = None             # Left child
+        self.right = None            # Right child
+        self.height = 1              # Height of the subtree
+        self.successor = None        # In-order successor
 
 
 class AVLTree:
     def __init__(self):
         self.root = None
 
+    # Utility function to get the height of the tree
     def height(self, node):
         return node.height if node else 0
 
-    def balance(self, node):
+    # Utility function to calculate balance factor of node
+    def get_balance(self, node):
         return self.height(node.left) - self.height(node.right) if node else 0
 
-    def insert(self, root, value, predecessor=None, successor=None):
-        if not root:
-            new_node = Node(value)
+    # Right rotate subtree rooted with y
+    def right_rotate(self, y):
+        x = y.left
+        T2 = x.right
+
+        # Perform rotation
+        x.right = y
+        y.left = T2
+
+        # Update heights
+        y.height = 1 + max(self.height(y.left), self.height(y.right))
+        x.height = 1 + max(self.height(x.left), self.height(x.right))
+
+        # Successor pointers remain valid after rotation
+        return x
+
+    # Left rotate subtree rooted with x
+    def left_rotate(self, x):
+        y = x.right
+        T2 = y.left
+
+        # Perform rotation
+        y.left = x
+        x.right = T2
+
+        # Update heights
+        x.height = 1 + max(self.height(x.left), self.height(x.right))
+        y.height = 1 + max(self.height(y.left), self.height(y.right))
+
+        # Successor pointers remain valid after rotation
+        return y
+
+    # Insert a node and update successor pointers
+    def insert(self, node, key, segment=None, predecessor=None, successor=None):
+        # Perform standard BST insert
+        if not node:
+            new_node = Node(key, segment)
             new_node.successor = successor
             if predecessor:
                 predecessor.successor = new_node
             return new_node
 
-        if value < root.value:
+        if key < node.key:
             # Current node is potential successor
-            root.left = self.insert(root.left, value, predecessor, root)
+            node.left = self.insert(node.left, key, segment, predecessor, node)
         else:
             # Current node is potential predecessor
-            root.right = self.insert(root.right, value, root, successor)
+            node.right = self.insert(node.right, key, segment, node, successor)
 
-        # Update height and balance
-        root.height = 1 + max(self.height(root.left), self.height(root.right))
-        return self.rebalance(root)
+        # Update height of this ancestor node
+        node.height = 1 + max(self.height(node.left), self.height(node.right))
 
-    def delete(self, root, value, parent=None):
-        if not root:
-            return root
+        # Get the balance factor to check whether this node became unbalanced
+        balance = self.get_balance(node)
 
-        if value < root.value:
-            root.left = self.delete(root.left, value, root)
-        elif value > root.value:
-            root.right = self.delete(root.right, value, root)
-        else:
-            # Node with one child or no child
-            if not root.left or not root.right:
-                temp = root.left if root.left else root.right
+        # Balance the tree
+        # Left Left Case
+        if balance > 1 and key < node.left.key:
+            return self.right_rotate(node)
 
-                # only one child case
-                if temp:
-                    # Copy the contents of the non-empty child
-                    temp.successor = root.successor
-                
-                # No child case
-                else:
-                    # Update successor pointers
-                    self.update_successor_pointers_on_delete(root, parent, temp)
+        # Right Right Case
+        if balance < -1 and key > node.right.key:
+            return self.left_rotate(node)
 
-                root = temp  # Replace root with its child
-            else:
-                # Node with two children: Get the inorder successor
-                temp = self.get_min_value_node(root.right)
+        # Left Right Case
+        if balance > 1 and key > node.left.key:
+            node.left = self.left_rotate(node.left)
+            return self.right_rotate(node)
 
-                # Copy the inorder successor's value to this node
-                root.value = temp.value
+        # Right Left Case
+        if balance < -1 and key < node.right.key:
+            node.right = self.right_rotate(node.right)
+            return self.left_rotate(node)
 
-                # Delete the inorder successor
-                root.right = self.delete(root.right, temp.value, root)
+        return node
 
-        if not root:
-            return root
-
-        # Update height and rebalance
-        root.height = 1 + max(self.height(root.left), self.height(root.right))
-        return self.rebalance(root)
-
-    def update_successor_pointers_on_delete(self, node_to_delete, parent, child):
-        """Update successor pointers when a node is deleted."""
-        # Update the predecessor's successor pointer
-        predecessor = self.find_predecessor(self.root, node_to_delete.value)
-        if predecessor:
-            predecessor.successor = node_to_delete.successor
-        # If the node_to_delete is the root and has no predecessor
-        elif parent is None:
-            if child:
-                # Update successor of child if it exists
-                child.successor = node_to_delete.successor
-
-    def find_predecessor(self, root, value):
-        """Find the predecessor of the node with the given value."""
-        predecessor = None
-        current = root
-        while current:
-            if value > current.value:
-                predecessor = current
-                current = current.right
-            elif value < current.value:
-                current = current.left
-            else:
-                if current.left:
-                    predecessor = self.get_max_value_node(current.left)
-                break
-        return predecessor
-
-    def get_min_value_node(self, node):
-        """Get the node with the minimum value (leftmost leaf)."""
+    # Find the node with minimum key value (leftmost leaf)
+    def min_value_node(self, node):
         current = node
         while current.left is not None:
             current = current.left
         return current
 
-    def get_max_value_node(self, node):
-        """Get the node with the maximum value (rightmost leaf)."""
+    # Find the node with maximum key value (rightmost leaf)
+    def max_value_node(self, node):
         current = node
         while current.right is not None:
             current = current.right
         return current
 
-    def rebalance(self, root):
-        balance = self.balance(root)
+    # Delete a node and update successor pointers
+    # Modified delete method
+# Modified delete method with the fix
+    def delete(self, node, key, predecessor=None, successor=None):
+        # Perform standard BST delete
+        if not node:
+            return node
+
+        if key < node.key:
+            # Current node is potential successor
+            node.left = self.delete(node.left, key, predecessor, node)
+        elif key > node.key:
+            # Current node is potential predecessor
+            node.right = self.delete(node.right, key, node, successor)
+        else:
+            # Node with one child or no child
+            if not node.left or not node.right:
+                temp = node.left if node.left else node.right
+
+                if temp:
+                    temp.successor = node.successor
+                if predecessor:
+                    predecessor.successor = node.successor
+                else:
+                    # If deleting the root node with no predecessor
+                    if temp:
+                        temp.successor = node.successor
+
+                node = temp  # Replace node with its child (could be None)
+            else:
+                # Node with two children:
+                # Get the inorder successor (smallest in the right subtree)
+                temp = self.min_value_node(node.right)
+
+                # Copy the inorder successor's data to this node
+                node.key = temp.key
+                node.segment = temp.segment
+
+                # Delete the inorder successor
+                node.right = self.delete(node.right, temp.key, node, successor)
+
+        if not node:
+            return node
+
+        # Update height
+        node.height = 1 + max(self.height(node.left), self.height(node.right))
+
+        # Balance the tree
+        balance = self.get_balance(node)
 
         # Left Left Case
-        if balance > 1 and self.balance(root.left) >= 0:
-            return self.right_rotate(root)
-
+        if balance > 1 and self.get_balance(node.left) >= 0:
+            node = self.right_rotate(node)
         # Left Right Case
-        if balance > 1 and self.balance(root.left) < 0:
-            root.left = self.left_rotate(root.left)
-            return self.right_rotate(root)
-
+        elif balance > 1 and self.get_balance(node.left) < 0:
+            node.left = self.left_rotate(node.left)
+            node = self.right_rotate(node)
         # Right Right Case
-        if balance < -1 and self.balance(root.right) <= 0:
-            return self.left_rotate(root)
-
+        elif balance < -1 and self.get_balance(node.right) <= 0:
+            node = self.left_rotate(node)
         # Right Left Case
-        if balance < -1 and self.balance(root.right) > 0:
-            root.right = self.right_rotate(root.right)
-            return self.left_rotate(root)
+        elif balance < -1 and self.get_balance(node.right) > 0:
+            node.right = self.right_rotate(node.right)
+            node = self.left_rotate(node)
 
-        return root
+        # Dirty fix: Ensure that the successor of the highest node is None
+        if node.successor == node:
+            node.successor = None
 
-    def left_rotate(self, z):
-        y = z.right
-        T2 = y.left
+        return node
+    # Public methods to insert and delete values
 
-        # Perform rotation
-        y.left = z
-        z.right = T2
+    def insert_value(self, key, segment=None):
+        self.root = self.insert(self.root, key, segment)
 
-        # Update heights
-        z.height = 1 + max(self.height(z.left), self.height(z.right))
-        y.height = 1 + max(self.height(y.left), self.height(y.right))
+    def delete_value(self, key):
+        self.root = self.delete(self.root, key)
 
-        # Successor pointers remain valid after rotation
-        return y
-
-    def right_rotate(self, z):
-        y = z.left
-        T3 = y.right
-
-        # Perform rotation
-        y.right = z
-        z.left = T3
-
-        # Update heights
-        z.height = 1 + max(self.height(z.left), self.height(z.right))
-        y.height = 1 + max(self.height(y.left), self.height(y.right))
-
-        # Successor pointers remain valid after rotation
-        return y
-
-    def find_min_ge(self, node, value):
-        """Find the node with the minimum value >= given value."""
-        if not node:
-            return None
-        if node.value == value:
-            return node
-        elif node.value < value:
-            return self.find_min_ge(node.right, value)
-        else:
-            left_result = self.find_min_ge(node.left, value)
-            return left_result if left_result else node
-
-    def search_range(self, low, high):
-        """Search for all values in the given range using successor pointers."""
-        result = []
-        node = self.find_min_ge(self.root, low)
-        while node and node.value <= high:
-            result.append(node.value)
-            node = node.successor
-        return result
-
-    def insert_value(self, value):
-        self.root = self.insert(self.root, value)
-
-    def delete_value(self, value):
-        self.root = self.delete(self.root, value)
-
+    # In-order traversal (for testing purposes)
     def inorder(self, node):
-        """Helper function to perform inorder traversal (for testing)."""
         if not node:
             return []
-        return self.inorder(node.left) + [node.value] + self.inorder(node.right)
+        return self.inorder(node.left) + [(node.key, node.successor.key if node.successor else None)] + self.inorder(node.right)
 
-# Demo main method
+
+# Test the AVL Tree implementation with some examples (for testing purposes only, dont run this code in the main program)
 if __name__ == "__main__":
     avl = AVLTree()
 
-    # Insert values
-    for value in [20, 10, 30, 5, 15, 25, 35]:
+    # First Tests
+    values_to_insert = [20, 10, 30, 5, 15, 25, 35]
+    for value in values_to_insert:
         avl.insert_value(value)
-        print(f"Inserted {value}: {avl.inorder(avl.root)}")
 
-    # Perform range search before deletion
-    low, high = 10, 30
-    print(f"Values in the range [{low}, {high}] before deletion: {avl.search_range(low, high)}")
+    print("First Tests:")
+    print("Tree after insertions (key, successor_key):")
+    print(avl.inorder(avl.root))
 
-    # Delete a node with two children
+    # Delete node with two children
     avl.delete_value(20)
-
-    # Perform range search after deletion
-    print(f"Values in the range [{low}, {high}] after deleting 20: {avl.search_range(low, high)}")
+    print("\nTree after deleting 20 (key, successor_key):")
+    print(avl.inorder(avl.root))
 
     # Delete a leaf node
     avl.delete_value(5)
+    print("\nTree after deleting 5 (key, successor_key):")
+    print(avl.inorder(avl.root))
 
-    # Perform range search after deletion
-    print(f"Values in the range [{low}, {high}] after deleting 5: {avl.search_range(low, high)}")
-
-    # Delete a node with one child
+    # Delete node with one child
     avl.delete_value(30)
+    print("\nTree after deleting 30 (key, successor_key):")
+    print(avl.inorder(avl.root))
 
-    # Perform range search after deletion
-    print(f"Values in the range [{low}, {high}] after deleting 30: {avl.search_range(low, high)}")
+    # Delete all nodes
+    avl.delete_value(10)
+    avl.delete_value(15)
+    avl.delete_value(25)
+    avl.delete_value(35)
+    print("\nTree after deleting all nodes:")
+    print(avl.inorder(avl.root))
 
-    # Check the in-order traversal of the tree
-    print("In-order traversal of the AVL tree:", avl.inorder(avl.root))
+    # Additional Tests
+    avl = AVLTree()
+    values_to_insert = [50, 30, 70, 20, 40, 60, 80, 10, 25, 35, 45]
+    for value in values_to_insert:
+        avl.insert_value(value)
+
+    print("\nAdditional Tests:")
+    print("Tree after insertions (key, successor_key):")
+    print(avl.inorder(avl.root))
+
+    # Delete node with two children
+    avl.delete_value(30)
+    print("\nTree after deleting 30 (key, successor_key):")
+    print(avl.inorder(avl.root))
+
+    # Delete a leaf node
+    avl.delete_value(10)
+    print("\nTree after deleting 10 (key, successor_key):")
+    print(avl.inorder(avl.root))
+
+    # Delete node with one child
+    avl.delete_value(80)
+    print("\nTree after deleting 80 (key, successor_key):")
+    print(avl.inorder(avl.root))
+
+    # Delete multiple nodes
+    avl.delete_value(50)
+    avl.delete_value(70)
+    print("\nTree after deleting 50 and 70 (key, successor_key):")
+    print(avl.inorder(avl.root))
