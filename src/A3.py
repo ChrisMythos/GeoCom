@@ -230,7 +230,7 @@ def construct_balanced_2d_tree(points_sorted_x, points_sorted_y, depth):
 
     axis = depth % 2  # 0 für x, 1 für y
 
-    if axis == 0:
+    if axis == 0:  # x-Achse
         median = len(points_sorted_x) // 2
         median_point = points_sorted_x[median]
         left_points_x = points_sorted_x[:median]
@@ -242,6 +242,7 @@ def construct_balanced_2d_tree(points_sorted_x, points_sorted_y, depth):
         right_points_y = [
             point for point in points_sorted_y if point.x > median_point.x]
 
+    # axis == 1 (y-Achse)
     else:
         median = len(points_sorted_y) // 2
         median_point = points_sorted_y[median]
@@ -254,15 +255,16 @@ def construct_balanced_2d_tree(points_sorted_x, points_sorted_y, depth):
         right_points_x = [
             point for point in points_sorted_x if point.y > median_point.y]
 
-    # Zusätzliche Überprüfung, um Endlosschleifen zu vermeiden
+    # Abbruchbedingung: Keine Punkte mehr übrig
     if not left_points_x and not right_points_x:
         return Node(point=median_point, axis=axis)
 
+    # Erstellen des Knotens mit dem Medianpunkt und der aktuellen Achse
     node = Node(
         point=median_point,
         axis=axis
     )
-
+    # Rekursiver Aufruf für linke und rechte Teilbäume mit den gefilterten Punktmengen
     node.left = construct_balanced_2d_tree(
         left_points_x, left_points_y, depth + 1)
     node.right = construct_balanced_2d_tree(
@@ -309,6 +311,7 @@ def perform_range_search(x_min, y_min, x_max, y_max):
     found_points.clear()
     # Suche starten
     range_search(root_node, x_min, y_min, x_max, y_max)
+
     # Gefundene Punkte markieren
     for point in found_points:
         for obj, p in point_objs:
@@ -324,13 +327,13 @@ def range_search(node, x_min, y_min, x_max, y_max):
     x = node.point.x
     y = node.point.y
 
+    # Wenn der Punkt im Suchbereich liegt, hinzufügen
     if x_min <= x <= x_max and y_min <= y <= y_max:
         found_points.append(node.point)
 
     axis = node.axis
 
-    if axis == 0:
-        # x-Achse
+    if axis == 0:  # Überprüfen ob Punkt im Suchbereich liegt (x-Achse)
         if x_min <= x:
             range_search(node.left, x_min, y_min, x_max, y_max)
         if x <= x_max:
@@ -434,10 +437,12 @@ add_radio = tk.Radiobutton(
     mode_frame, text="Punkte hinzufügen", variable=mode_var, value='add', bg='lightgray')
 add_radio.pack(anchor='w')
 
+# Verschiebemodus hinzufügen
 move_radio = tk.Radiobutton(
     mode_frame, text="Punkte verschieben", variable=mode_var, value='move', bg='lightgray')
 move_radio.pack(anchor='w')
 
+# Bereichssuche-Modus hinzufügen
 range_radio = tk.Radiobutton(
     mode_frame, text="Bereichssuche", variable=mode_var, value='range', bg='lightgray')
 range_radio.pack(anchor='w')
@@ -447,6 +452,7 @@ generate_button = tk.Button(
     sidebar, text="Zufällige Punkte erzeugen", command=generate_points)
 generate_button.pack(pady=5)
 
+# Punkte löschen Button (alle Punkte)
 clear_button = tk.Button(
     sidebar, text="Punkte löschen", command=lambda: [points.clear(), point_objs.clear(), clear_canvas()])
 clear_button.pack(pady=5)
