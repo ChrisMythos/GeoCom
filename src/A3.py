@@ -2,6 +2,8 @@ import tkinter as tk
 import random
 from dataclasses import dataclass
 
+# TODO: Range search findet nicht alle Punkte, wenn es mehrere Pubkte mit gleichem X- oder Y-Wert gibt (Bug Fix)
+
 
 @dataclass
 class Point:
