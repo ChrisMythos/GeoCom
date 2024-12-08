@@ -27,7 +27,7 @@ root.title("Interaktive Konstruktion eines 2D-Baums")
 # Fenstergröße festlegen
 root.geometry("1000x800")
 
-# Grid-Layout konfigurieren (2 Spalten, 1 Zeile)
+# Grid-Layout konfigurieren (2 Spalten, 1 Zeile) 
 root.grid_columnconfigure(0, weight=0)  # Seitenleiste
 root.grid_columnconfigure(1, weight=1)  # Canvas
 root.grid_rowconfigure(0, weight=1)     # Zeile dehnt sich vertikal aus
@@ -230,30 +230,25 @@ def construct_balanced_2d_tree(points_sorted_x, points_sorted_y, depth):
 
     axis = depth % 2  # 0 für x, 1 für y
 
-    if axis == 0:  # x-Achse
+    if axis == 0: 
         median = len(points_sorted_x) // 2
         median_point = points_sorted_x[median]
         left_points_x = points_sorted_x[:median]
         right_points_x = points_sorted_x[median+1:]
-
-        # Filtern der Punkte für die y-sortierte Liste
-        left_points_y = [
-            point for point in points_sorted_y if point.x < median_point.x]
-        right_points_y = [
-            point for point in points_sorted_y if point.x > median_point.x]
-
-    # axis == 1 (y-Achse)
-    else:
+        
+        # Anstatt nur strictly < oder > auch == berücksichtigen:
+        left_points_y = [p for p in points_sorted_y if p.x < median_point.x or (p.x == median_point.x and p.y < median_point.y)]
+        right_points_y = [p for p in points_sorted_y if p.x > median_point.x or (p.x == median_point.x and p.y > median_point.y)]
+        
+    else: # y-Achse
         median = len(points_sorted_y) // 2
         median_point = points_sorted_y[median]
         left_points_y = points_sorted_y[:median]
         right_points_y = points_sorted_y[median+1:]
+        
+        left_points_x = [p for p in points_sorted_x if p.y < median_point.y or (p.y == median_point.y and p.x < median_point.x)]
+        right_points_x = [p for p in points_sorted_x if p.y > median_point.y or (p.y == median_point.y and p.x > median_point.x)]
 
-        # Filtern der Punkte für die x-sortierte Liste
-        left_points_x = [
-            point for point in points_sorted_x if point.y < median_point.y]
-        right_points_x = [
-            point for point in points_sorted_x if point.y > median_point.y]
 
     # Abbruchbedingung: Keine Punkte mehr übrig
     if not left_points_x and not right_points_x:
