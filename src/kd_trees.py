@@ -2,6 +2,8 @@ import tkinter as tk
 import random
 from dataclasses import dataclass
 
+# TODO: Range search findet nicht alle Punkte, wenn es mehrere Pubkte mit gleichem X- oder Y-Wert gibt (Bug Fix)
+
 
 @dataclass
 class Point:
@@ -50,22 +52,27 @@ point_count_slider = tk.Scale(
     label='Anzahl der Punkte',
     length=150
 )
-point_count_slider.set(20)  # Standardwert setzen
+
+point_count_slider.set(100)  # Standardwert setzen
 point_count_slider.pack(pady=5)
 
 # Steuerungsmodus-Auswahl hinzufügen
 control_mode_var = tk.StringVar(value='normal')
 
+# Steuerungsmodus-Label
 control_mode_label = tk.Label(sidebar, text="Steuerungsmodus:", bg='lightgray')
 control_mode_label.pack(pady=(10, 0))
 
+# Steuerungsmodus-Radiobuttons
 control_mode_frame = tk.Frame(sidebar, bg='lightgray')
 control_mode_frame.pack(pady=5)
 
+# Radiobuttons für die Auswahl des Steuerungsmodus
 normal_control_radio = tk.Radiobutton(
     control_mode_frame, text="Normale Maussteuerung", variable=control_mode_var, value='normal', bg='lightgray')
 normal_control_radio.pack(anchor='w')
 
+# Radiobutton für die Auswahl der Touchpad-Steuerung
 touchpad_control_radio = tk.Radiobutton(
     control_mode_frame, text="Vereinfachte Touchpad-Steuerung", variable=control_mode_var, value='touchpad', bg='lightgray')
 touchpad_control_radio.pack(anchor='w')
@@ -105,14 +112,17 @@ def generate_points():
     points.clear()
     point_objs.clear()
     num_points = point_count_slider.get()
+    # generiere zufällige Punkte (x, y) im Bereich (10, 10) bis (canvas_width-10, canvas_height-10)
     for _ in range(num_points):
         x = random.randint(10, canvas.winfo_width() - 10)
         y = random.randint(10, canvas.winfo_height() - 10)
         point = Point(x, y)
         points.append(point)
+        # Punkt auf dem Canvas zeichnen und canvas-Objekt speichern (für spätere Referenz)
         obj = canvas.create_oval(
             x-3, y-3, x+3, y+3, fill='black', tags='point')
         point_objs.append((obj, point))
+    # 2D-Baum erstellen und Partitionierung zeichnen
     build_tree_and_draw()
 
 
@@ -210,11 +220,15 @@ def range_selection_click(x, y):
 def build_tree_and_draw():
     """Erstellt den 2D-Baum und zeichnet die Partitionierung."""
     global root_node
+    # wenn keine Punkte vorhanden sind, dann abbrechen
     if not points:
         return
+    # punkte nach x- und y-koordinaten sortieren (preprocessing)
     points_sorted_x, points_sorted_y = preprocessing(points)
+    # initialisiere den 2D-Baum mit der Wurzel
     root_node = construct_balanced_2d_tree(
         points_sorted_x, points_sorted_y, depth=0)
+    # zeichne die Partitionierung
     clear_partition_lines()
     draw_partition(root_node, 0, 0, 0, canvas.winfo_width(),
                    canvas.winfo_height())
@@ -283,7 +297,7 @@ def draw_partition(node, depth, x_min, y_min, x_max, y_max):
         draw_partition(node.left, depth+1, x_min, y_min, x, y_max)
         draw_partition(node.right, depth+1, x, y_min, x_max, y_max)
     else:
-        # Horizontale Linie
+        # Horizontale Linie (axis == 1)
         line = canvas.create_line(x_min, y, x_max, y, fill='blue')
         lines.append(line)
         draw_partition(node.left, depth+1, x_min, y_min, x_max, y)
@@ -304,7 +318,7 @@ def perform_range_search(x_min, y_min, x_max, y_max):
     for obj, point in point_objs:
         canvas.itemconfig(obj, fill='black')
     found_points.clear()
-    # Suche starten
+    # Rekursive Bereichssuche starten
     range_search(root_node, x_min, y_min, x_max, y_max)
 
     # Gefundene Punkte markieren
@@ -334,7 +348,7 @@ def range_search(node, x_min, y_min, x_max, y_max):
         if x <= x_max:
             range_search(node.right, x_min, y_min, x_max, y_max)
     else:
-        # y-Achse
+        # y-Achse (axis == 1)
         if y_min <= y:
             range_search(node.left, x_min, y_min, x_max, y_max)
         if y <= y_max:
