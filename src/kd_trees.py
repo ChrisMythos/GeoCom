@@ -2,8 +2,6 @@ import tkinter as tk
 import random
 from dataclasses import dataclass
 
-# TODO: Range search findet nicht alle Punkte, wenn es mehrere Pubkte mit gleichem X- oder Y-Wert gibt (Bug Fix)
-
 
 @dataclass
 class Point:
@@ -29,7 +27,7 @@ root.title("Interaktive Konstruktion eines 2D-Baums")
 # Fenstergröße festlegen
 root.geometry("1000x800")
 
-# Grid-Layout konfigurieren (2 Spalten, 1 Zeile) 
+# Grid-Layout konfigurieren (2 Spalten, 1 Zeile)
 root.grid_columnconfigure(0, weight=0)  # Seitenleiste
 root.grid_columnconfigure(1, weight=1)  # Canvas
 root.grid_rowconfigure(0, weight=1)     # Zeile dehnt sich vertikal aus
@@ -98,6 +96,7 @@ found_points = []      # Gefundene Punkte im Suchbereich
 search_rectangle = None  # Gezeichnetes Suchrechteck
 
 
+# ---------------------------------------------------------
 def preprocessing(points):
     """Sortiert die Punkte nach x- und y-Koordinaten."""
     points_sorted_x = sorted(points, key=lambda point: (point.x, point.y))
@@ -244,25 +243,32 @@ def construct_balanced_2d_tree(points_sorted_x, points_sorted_y, depth):
 
     axis = depth % 2  # 0 für x, 1 für y
 
-    if axis == 0: 
+    if axis == 0:
         median = len(points_sorted_x) // 2
         median_point = points_sorted_x[median]
         left_points_x = points_sorted_x[:median]
         right_points_x = points_sorted_x[median+1:]
-        
-        # Anstatt nur strictly < oder > auch == berücksichtigen:
-        left_points_y = [p for p in points_sorted_y if p.x < median_point.x or (p.x == median_point.x and p.y < median_point.y)]
-        right_points_y = [p for p in points_sorted_y if p.x > median_point.x or (p.x == median_point.x and p.y > median_point.y)]
-        
-    else: # y-Achse
+
+        # Sortieren der Y Punkte nach dem X Median
+        # wenn der Punkt gleich dem X-Median ist, dann wird Y Median verwendet
+        left_points_y = [p for p in points_sorted_y if p.x < median_point.x or (
+            p.x == median_point.x and p.y < median_point.y)]
+        right_points_y = [p for p in points_sorted_y if p.x > median_point.x or (
+            p.x == median_point.x and p.y > median_point.y)]
+
+    else:  # y-Achse
         median = len(points_sorted_y) // 2
         median_point = points_sorted_y[median]
+        # speichere die Punkte links und rechts des Medianpunkts
         left_points_y = points_sorted_y[:median]
         right_points_y = points_sorted_y[median+1:]
-        
-        left_points_x = [p for p in points_sorted_x if p.y < median_point.y or (p.y == median_point.y and p.x < median_point.x)]
-        right_points_x = [p for p in points_sorted_x if p.y > median_point.y or (p.y == median_point.y and p.x > median_point.x)]
 
+        # Sortieren der x Punkte nach dem Y Median
+        # wenn der Punkt gleich dem Median ist, dann wird X Median verwendet
+        left_points_x = [p for p in points_sorted_x if p.y < median_point.y or (
+            p.y == median_point.y and p.x < median_point.x)]
+        right_points_x = [p for p in points_sorted_x if p.y > median_point.y or (
+                          p.y == median_point.y and p.x > median_point.x)]
 
     # Abbruchbedingung: Keine Punkte mehr übrig
     if not left_points_x and not right_points_x:
@@ -282,6 +288,7 @@ def construct_balanced_2d_tree(points_sorted_x, points_sorted_y, depth):
     return node
 
 
+# normalerweise: x_min, y_min = 0,  x_max, y_max = canvas_width, canvas_height
 def draw_partition(node, depth, x_min, y_min, x_max, y_max):
     """Zeichnet die Partitionierungslinien des 2D-Baums."""
     if node is None:
@@ -329,32 +336,41 @@ def perform_range_search(x_min, y_min, x_max, y_max):
 
 
 def range_search(node, x_min, y_min, x_max, y_max):
-    """Rekursiver Bereichssuchalgorithmus."""
+    """Rekursiver Bereichssuchalgorithmus in einem k-d-Baum für 2D-Punkte."""
+
     if node is None:
+        # Wenn der aktuelle Knoten leer ist, beenden der Suche in diesem Pfad
         return
 
-    x = node.point.x
-    y = node.point.y
+    x = node.point.x  # x-Koordinate des Punktes im aktuellen Knoten
+    y = node.point.y  # y-Koordinate des Punktes im aktuellen Knoten
 
-    # Wenn der Punkt im Suchbereich liegt, hinzufügen
+    # Wenn der Punkt des aktuellen Knotens im Suchbereich liegt, füge ihn zur Ausgabe hinzu
     if x_min <= x <= x_max and y_min <= y <= y_max:
         found_points.append(node.point)
 
+    # Achse der Teilung im aktuellen Knoten (0 für x-Achse, 1 für y-Achse)
     axis = node.axis
 
-    if axis == 0:  # Überprüfen ob Punkt im Suchbereich liegt (x-Achse)
+    if axis == 0:  # x-Achse
+        # Entscheidung, welche Kindknoten durchsucht werden sollen basierend auf x-Wert
         if x_min <= x:
+            # Links rekursiv suchen
             range_search(node.left, x_min, y_min, x_max, y_max)
         if x <= x_max:
+            # Rechts rekursiv suchen
             range_search(node.right, x_min, y_min, x_max, y_max)
-    else:
-        # y-Achse (axis == 1)
+    else:  # y-Achse
+        # Entscheidung, welche Kindknoten durchsucht werden sollen basierend auf y-Wert
         if y_min <= y:
+            # Links rekursiv suchen
             range_search(node.left, x_min, y_min, x_max, y_max)
         if y <= y_max:
+            # Rechts rekursiv suchen
             range_search(node.right, x_min, y_min, x_max, y_max)
 
 
+# Ereignisbehandlung für Steuerung
 def on_point_press(event):
     """Startet das Verschieben eines Punktes im normalen Modus."""
     global selected_point
