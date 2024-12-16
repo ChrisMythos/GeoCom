@@ -1,37 +1,51 @@
 import tkinter as tk
 import random
-from collections import namedtuple
-from convex_hull import graham_scan  # Import graham_scan (excercise 1)
+from dataclasses import dataclass
+from typing import List, Set
+from convex_hull import graham_scan
 
-Point = namedtuple('Point', ['x', 'y'])
+
+@dataclass(frozen=True)
+class Point:
+    x: float
+    y: float
 
 
+@dataclass
 class Triangle:
-    def __init__(self, p1, p2, p3):
-        self.p1 = p1
-        self.p2 = p2
-        self.p3 = p3
+    p1: Point
+    p2: Point
+    p3: Point
 
-    def vertices(self):
+    def vertices(self) -> List[Point]:
         return [self.p1, self.p2, self.p3]
+
+    def __post_init__(self):
+        # Wir stellen sicher, dass alle Operationen, die von sortierten
+        # Scheitelpunkten abhängen, sich auf eine stabile Reihenfolge verlassen können.
+        # Wenn in __post_init__ in einer Dataclass ohne `frozen=True` mutiert,
+        # ist es erlaubt. Aber wir speichern sie nicht anders; stattdessen behandeln wir das Sortieren in __hash__.
+        pass
+
+    def __hash__(self):
+        # Sortieren der Vertices, um eine stabile Reihenfolge zu gewährleisten
+        v = sorted(self.vertices(), key=lambda p: (p.x, p.y))
+        return hash((v[0], v[1], v[2]))
 
     def __eq__(self, other):
         if not isinstance(other, Triangle):
             return False
         return set(self.vertices()) == set(other.vertices())
 
-    def __hash__(self):
-        v = sorted(self.vertices(), key=lambda p: (p.x, p.y))
-        return hash((v[0], v[1], v[2]))
 
+def circumcircle_contains(tri: Triangle, p: Point) -> bool:
+    p1, p2, p3 = tri.p1, tri.p2, tri.p3  # vertices des Dreiecks
+    ax, ay = p1.x, p1.y  # vertex A
+    bx, by = p2.x, p2.y  # vertex B
+    cx, cy = p3.x, p3.y  # vertex C
+    dx, dy = p.x, p.y    # punkt D (der zu testende Punkt)
 
-def circumcircle_contains(tri, p):
-    p1, p2, p3 = tri.p1, tri.p2, tri.p3
-    ax, ay = p1.x, p1.y
-    bx, by = p2.x, p2.y
-    cx, cy = p3.x, p3.y
-    dx, dy = p.x, p.y
-
+    # Berechnung der Determinante
     A = ax - dx
     B = ay - dy
     C = (ax**2 - dx**2) + (ay**2 - dy**2)
@@ -42,11 +56,12 @@ def circumcircle_contains(tri, p):
     H = cy - dy
     I = (cx**2 - dx**2) + (cy**2 - dy**2)
 
+    # wenn die Determinante positiv ist, liegt der Punkt innerhalb des Umkreises des Dreiecks
     det = A*(E*I - F*H) - B*(D*I - F*G) + C*(D*H - E*G)
     return det > 0
 
 
-def point_in_triangle(pt, tri):
+def point_in_triangle(pt: Point, tri: Triangle) -> bool:
     p = pt
     p1, p2, p3 = tri.p1, tri.p2, tri.p3
     denom = ((p2.y - p3.y) * (p1.x - p3.x) + (p3.x - p2.x) * (p1.y - p3.y))
@@ -58,22 +73,34 @@ def point_in_triangle(pt, tri):
     return (w1 >= 0) and (w2 >= 0) and (w3 >= 0)
 
 
-def find_triangle_containing_point(triangles, pt):
+def find_triangle_containing_point(triangles: Set[Triangle], pt: Point):
+    # Checken aller Dreiecke, ob der Punkt darin enthalten ist (O(n))
     for t in triangles:
         if point_in_triangle(pt, t):
             return t
     return None
 
 
-def delaunay_insert_point(triangles, all_points, new_point):
-    # Vereinfachter Insert (ohne wiederholte Korrekturschleifen)
-    container = find_triangle_containing_point(triangles, new_point)
-    if container is None:
-        # Wenn kein Dreieck den Punkt enthält, dann ignorieren wir (für Debug-Zwecke)
+def delaunay_insert_point(triangles: Set[Triangle], all_points: List[Point], new_point: Point) -> Set[Triangle]:
+    """
+    Inserts a new point into an existing Delaunay triangulation.
+    This function finds the triangle containing the new point, removes it, and creates three new triangles
+    by connecting the new point to the vertices of the containing triangle.
+
+    Args:
+        triangles (Set[Triangle]): A set of triangles representing the current Delaunay triangulation.
+        all_points (List[Point]): A list of all points in the triangulation.
+        new_point (Point): The new point to be inserted into the triangulation.
+
+    Returns:
+        Set[Triangle]: The updated set of triangles after inserting the new point.
+    """
+    container_triangle = find_triangle_containing_point(triangles, new_point)
+    if container_triangle is None:
         return triangles
 
-    triangles.remove(container)
-    p1, p2, p3 = container.p1, container.p2, container.p3
+    triangles.remove(container_triangle)
+    p1, p2, p3 = container_triangle.p1, container_triangle.p2, container_triangle.p3
     new_tris = [
         Triangle(new_point, p1, p2),
         Triangle(new_point, p2, p3),
@@ -81,19 +108,15 @@ def delaunay_insert_point(triangles, all_points, new_point):
     ]
     for nt in new_tris:
         triangles.add(nt)
-
-    # Hier könnte der Delaunay-Korrekturschritt erfolgen, wir lassen ihn vorerst weg,
-    # um zu sehen, ob das Programm stabil läuft.
-
+    # For now, no Delaunay correction loop to keep things simple.
     return triangles
 
 
 ###############################################
-# GUI - minimal, um Punkte hinzuzufügen
+# GUI
 ###############################################
-
 root = tk.Tk()
-root.title("Delaunay Triangulation Test")
+root.title("Delaunay Triangulation with Dataclasses")
 
 root.geometry("1000x800")
 root.grid_columnconfigure(0, weight=0)
@@ -115,7 +138,7 @@ point_count_slider.pack(pady=5)
 canvas = tk.Canvas(root, bg='white')
 canvas.grid(row=0, column=1, sticky="nsew")
 
-points = []
+points: List[Point] = []
 point_objs = []
 
 
@@ -148,7 +171,8 @@ def generate_random_points():
 def perform_delaunay():
     if len(points) < 3:
         return
-    # Schritt 1: Konvexe Hülle
+
+    # Compute hull using the imported function
     points_tuple = [(p.x, p.y) for p in points]
     hull = graham_scan(points_tuple)
     hull_points = [Point(h[0], h[1]) for h in hull]
@@ -158,10 +182,9 @@ def perform_delaunay():
 
     random.shuffle(interior_points)
 
-    # Initiale Triangulation:
-    triangles = set()
+    triangles: Set[Triangle] = set()
     if len(interior_points) == 0:
-        # Wenn es keine inneren Punkte gibt:
+        # If no interior points, just triangulate hull naively if possible
         if len(hull_points) < 3:
             return
         for i in range(1, len(hull_points)-1):
@@ -174,12 +197,11 @@ def perform_delaunay():
                          hull_points[(i+1) % len(hull_points)])
             triangles.add(t)
 
-        # Füge restliche Punkte ein (ohne Delaunay-Korrektur erstmal)
         for i in range(1, len(interior_points)):
             p_i = interior_points[i]
             triangles = delaunay_insert_point(triangles, points, p_i)
 
-    # Zeichne Resultat (vorerst ohne weitere Delaunay-Korrektur)
+    # Draw result
     canvas.delete("triangle")
     for tri in triangles:
         canvas.create_polygon([tri.p1.x, tri.p1.y, tri.p2.x, tri.p2.y, tri.p3.x, tri.p3.y],
