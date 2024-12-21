@@ -74,13 +74,59 @@ def find_triangle_containing_point(triangles: Set[Triangle], pt: Point):
     return None
 
 
+def find_triangle_neighbors(triangles: Set[Triangle], tri: Triangle) -> List[Triangle]:
+    # O(n) neighbor search
+    nbrs = []
+    v = tri.vertices()
+    edges = {(v[0], v[1]), (v[1], v[2]), (v[2], v[0])}
+    norm_edges = set()
+    for e in edges:
+        e_sorted = tuple(sorted(e, key=lambda p: (p.x, p.y)))
+        norm_edges.add(e_sorted)
+
+    for t in triangles:
+        if t == tri:
+            continue
+        v2 = t.vertices()
+        t_edges = [
+            tuple(sorted((v2[0], v2[1]), key=lambda p: (p.x, p.y))),
+            tuple(sorted((v2[1], v2[2]), key=lambda p: (p.x, p.y))),
+            tuple(sorted((v2[2], v2[0]), key=lambda p: (p.x, p.y))),
+        ]
+        if any(e in norm_edges for e in t_edges):
+            nbrs.append(t)
+    return nbrs
+
+
+def find_cavity(
+    triangles: Set[Triangle], new_point: Point, container_triangle: Triangle
+) -> Set[Triangle]:
+    # Use a stack/queue to find all connected bad triangles
+    bad_triangles = set([container_triangle])
+    stack = [container_triangle]
+
+    while stack:
+        current = stack.pop()
+        neighbors = find_triangle_neighbors(triangles, current)
+        for nbr in neighbors:
+            if nbr not in bad_triangles:
+                if circumcircle_contains(nbr, new_point):
+                    bad_triangles.add(nbr)
+                    stack.append(nbr)
+
+    return bad_triangles
+
+
 def delaunay_insert_point(
     triangles: Set[Triangle], all_points: List[Point], new_point: Point
 ) -> Set[Triangle]:
+
     container_triangle = find_triangle_containing_point(triangles, new_point)
     if container_triangle is None:
+        # If no containing triangle is found, return unchanged
         return triangles
-    # draw the container triangle in red
+
+    # Highlight the container triangle in red (for visualization)
     canvas.create_polygon(
         [
             container_triangle.p1.x,
@@ -96,15 +142,11 @@ def delaunay_insert_point(
     )
     root.update()
     sleep(0.5)
-    # find all triangles that violate the Delaunay condition unsing ajeacent triangles of the container triangle
-    # and the new point
-    bad_triangles: Set[Triangle] = set()
-    for t in triangles:
-        if t == container_triangle:
-            continue
-        if circumcircle_contains(t, new_point):
-            bad_triangles.add(t)
-    # draw the bad triangles in green
+
+    # Find the cavity (connected bad triangles) using the Bowyer-Watson approach
+    bad_triangles = find_cavity(triangles, new_point, container_triangle)
+
+    # Highlight bad triangles in green
     for t in bad_triangles:
         canvas.create_polygon(
             [t.p1.x, t.p1.y, t.p2.x, t.p2.y, t.p3.x, t.p3.y],
@@ -115,29 +157,12 @@ def delaunay_insert_point(
     root.update()
     sleep(0.5)
 
-    # remove the bad triangles who violate the Delaunay condition
-    remianing_triangles = triangles - bad_triangles
+    # Remove the bad triangles from the triangulation
+    remaining_triangles = triangles - bad_triangles
 
-    # redraw the remaining triangles
+    # Redraw only the remaining triangles in blue (clear previous)
     canvas.delete("triangle")
-    for t in remianing_triangles:
-        canvas.create_polygon(
-            [t.p1.x, t.p1.y, t.p2.x, t.p2.y, t.p3.x, t.p3.y],
-            outline="blue",
-            fill="",
-            tags="triangle",
-        )
-    root.update()
-
-    sleep(0.5)
-    # add new triagles formed by the new point and the walls of whole cut by the removal of bad triangles
-    for t in bad_triangles:
-        remianing_triangles.add(Triangle(t.p1, t.p2, new_point))
-        remianing_triangles.add(Triangle(t.p2, t.p3, new_point))
-        remianing_triangles.add(Triangle(t.p3, t.p1, new_point))
-
-    # draw the new triangles in blue
-    for t in remianing_triangles:
+    for t in remaining_triangles:
         canvas.create_polygon(
             [t.p1.x, t.p1.y, t.p2.x, t.p2.y, t.p3.x, t.p3.y],
             outline="blue",
@@ -147,7 +172,70 @@ def delaunay_insert_point(
     root.update()
     sleep(0.5)
 
-    return remianing_triangles
+    # Determine the polygon hole formed by removing bad_triangles
+    edge_count = {}
+
+    def add_edge(a, b):
+        e = tuple(sorted((a, b), key=lambda p: (p.x, p.y)))
+        edge_count[e] = edge_count.get(e, 0) + 1
+
+    # Count edges of all removed triangles
+    for tri in bad_triangles:
+        v = tri.vertices()
+        add_edge(v[0], v[1])
+        add_edge(v[1], v[2])
+        add_edge(v[2], v[0])
+
+    # Boundary edges are those that appear exactly once
+    boundary_edges = [e for e, c in edge_count.items() if c == 1]
+
+    if not boundary_edges:
+        # No hole to fill (degenerate case)
+        return remaining_triangles
+
+    # Reconstruct the polygon loop from boundary edges
+    polygon = [boundary_edges[0][0], boundary_edges[0][1]]
+    used = {boundary_edges[0]}
+    while len(used) < len(boundary_edges):
+        last_point = polygon[-1]
+        found_next = False
+        for e in boundary_edges:
+            if e in used:
+                continue
+            if e[0] == last_point:
+                polygon.append(e[1])
+                used.add(e)
+                found_next = True
+                break
+            elif e[1] == last_point:
+                polygon.append(e[0])
+                used.add(e)
+                found_next = True
+                break
+        if not found_next:
+            # If we can't form a closed polygon, break (degenerate case)
+            break
+
+    # Triangulate the hole by connecting new_point to the polygon edges
+    for i in range(len(polygon)):
+        p_current = polygon[i]
+        p_next = polygon[(i + 1) % len(polygon)]
+        new_tri = Triangle(new_point, p_current, p_next)
+        remaining_triangles.add(new_tri)
+
+    # Redraw the final updated triangulation in blue
+    canvas.delete("triangle")
+    for t in remaining_triangles:
+        canvas.create_polygon(
+            [t.p1.x, t.p1.y, t.p2.x, t.p2.y, t.p3.x, t.p3.y],
+            outline="blue",
+            fill="",
+            tags="triangle",
+        )
+    root.update()
+    sleep(0.5)
+
+    return remaining_triangles
 
 
 def draw_hull(hull_points):
