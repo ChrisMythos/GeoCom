@@ -4,7 +4,7 @@ import random
 from dataclasses import dataclass
 from typing import List, Set
 from convex_hull import graham_scan
-import pdb
+
 @dataclass(frozen=True)
 class Point:
     x: float
