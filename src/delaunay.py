@@ -5,13 +5,10 @@ from dataclasses import dataclass
 from typing import List, Set
 from convex_hull import graham_scan
 import pdb
-
-
 @dataclass(frozen=True)
 class Point:
     x: float
     y: float
-
 
 @dataclass
 class Triangle:
@@ -47,12 +44,14 @@ class Triangle:
 
 
 def circumcircle_contains(tri: Triangle, p: Point, epsilon=1e-8) -> bool:
+    # Extract coordinates of the triangle vertices and the point
     p1, p2, p3 = tri.p1, tri.p2, tri.p3
     ax, ay = p1.x, p1.y
     bx, by = p2.x, p2.y
     cx, cy = p3.x, p3.y
     dx, dy = p.x, p.y
 
+    # Compute the differences between the triangle vertices and the point
     A = ax - dx
     B = ay - dy
     C = (ax**2 - dx**2) + (ay**2 - dy**2)
@@ -63,8 +62,10 @@ def circumcircle_contains(tri: Triangle, p: Point, epsilon=1e-8) -> bool:
     H = cy - dy
     I = (cx**2 - dx**2) + (cy**2 - dy**2)
 
+    # Calculate the determinant of the matrix
     det = A * (E * I - F * H) - B * (D * I - F * G) + C * (D * H - E * G)
 
+    # Return True if the determinant is positive (point is inside the circumcircle)
     return det > epsilon
 
 
@@ -77,17 +78,24 @@ def is_valid_triangle(triangle):
     # Use a set to check if all points are unique
     return len({p1, p2, p3}) == 3
 
-
-
 def point_in_triangle(pt: Point, tri: Triangle) -> bool:
+    # Extract the point and the vertices of the triangle
     p = pt
     p1, p2, p3 = tri.p1, tri.p2, tri.p3
+
+    # Calculate the denominator of the barycentric coordinates
     denom = (p2.y - p3.y) * (p1.x - p3.x) + (p3.x - p2.x) * (p1.y - p3.y)
+    
+    # If the denominator is zero, the points are collinear and the point is not inside the triangle
     if denom == 0:
         return False
+
+    # Calculate the barycentric coordinates
     w1 = ((p2.y - p3.y) * (p.x - p3.x) + (p3.x - p2.x) * (p.y - p3.y)) / denom
     w2 = ((p3.y - p1.y) * (p.x - p3.x) + (p1.x - p3.x) * (p.y - p3.y)) / denom
     w3 = 1 - w1 - w2
+
+    # Check if the point is inside the triangle by verifying if all barycentric coordinates are non-negative
     return (w1 >= 0) and (w2 >= 0) and (w3 >= 0)
 
 
@@ -122,7 +130,6 @@ def find_triangle_neighbors(triangles: Set[Triangle], tri: Triangle) -> List[Tri
     return nbrs
 
 
-# fix this function to find the cavity of bad triangles - not working correctly
 def find_cavity(
     triangles: Set[Triangle], new_point: Point, container_triangle: Triangle
 ) -> Set[Triangle]:
@@ -142,7 +149,6 @@ def find_cavity(
                     stack.append(nbr)
     
     return bad_triangles
-
 
 # simpler implementation of find_cavity
 def find_cavity_simple(triangles: Set[Triangle], new_point: Point) -> Set[Triangle]:
@@ -165,62 +171,22 @@ def delaunay_insert_point(
     triangles: Set[Triangle], all_points: List[Point], new_point: Point
 ) -> Set[Triangle]:
 
-    # mark the new point with a circle around it
-    canvas.create_oval(
-        new_point.x - 5,
-        new_point.y - 5,
-        new_point.x + 5,
-        new_point.y + 5,
-        outline="orange",
-        tags="new_point_circle",
-        width=3,
-    )
+    highlight_new_point(new_point)
 
     # Find the triangle containing the new point (works)
     container_triangle = find_triangle_containing_point(triangles, new_point)
     if container_triangle is None:
         # If no containing triangle is found, return unchanged
         print("No containing triangle found")
-        print("Points:", all_points)
-        print("New point:", new_point)
-        print("Triangles:", triangles)
-        exit()
         return triangles
 
     # Highlight the container triangle in green (for visualization)
-    canvas.create_polygon(
-        [
-            container_triangle.p1.x,
-            container_triangle.p1.y,
-            container_triangle.p2.x,
-            container_triangle.p2.y,
-            container_triangle.p3.x,
-            container_triangle.p3.y,
-        ],
-        outline="green",
-        fill="",
-        tags="triangle_containing_point",
-        width=4,
-    )
-    root.update()
-    sleep(0.5)
+    highlight_container_triangle(container_triangle)
 
-    # Find the cavity (connected bad triangles) using the Bowyer-Watson approach - WRONG not working
+    # Find the cavity (connected bad triangles) that need to be removed 
     bad_triangles = find_cavity(triangles, new_point, container_triangle)
-    # simpler implementation of find_cavity
-    # bad_triangles = find_cavity_simple(triangles, new_point)
 
-    # Highlight bad triangles in green
-    for t in bad_triangles:
-        canvas.create_polygon(
-            [t.p1.x, t.p1.y, t.p2.x, t.p2.y, t.p3.x, t.p3.y],
-            outline="lightgreen",
-            fill="",
-            tags="bad_triangle",
-            width=4,
-        )
-    root.update()
-    sleep(0.5)
+    highlight_bad_triangles(bad_triangles)
 
     print("Amount triangles:", len(triangles))
     print("Amount bad triangles:", len(bad_triangles))
@@ -247,15 +213,7 @@ def delaunay_insert_point(
     root.update()
 
     # Redraw only the remaining triangles in blue (clear previous)
-    for t in remaining_triangles:
-        canvas.create_polygon(
-            [t.p1.x, t.p1.y, t.p2.x, t.p2.y, t.p3.x, t.p3.y],
-            outline="blue",
-            fill="",
-            tags="triangle",
-        )
-    root.update()
-    sleep(0.5)
+    draw_triangles(remaining_triangles)
 
     # Determine the polygon hole formed by removing bad_triangles
     edge_count = {}
@@ -274,16 +232,13 @@ def delaunay_insert_point(
     # Boundary edges are those that appear exactly once
     boundary_edges = [e for e, c in edge_count.items() if c == 1]
 
-    non_boundary_edges = [e for e, c in edge_count.items() if c != 1]
-    # all the edges that are not boundary edges should be deleted
-
     # show the boundary edges on canvas
     for e in boundary_edges:
         canvas.create_line(
             e[0].x, e[0].y, e[1].x, e[1].y, fill="red", tags="boundary_edge", width=4
         )
     root.update()
-    sleep(1)
+    sleep(sleep_time_slider.get())
 
     if not boundary_edges:
         # No hole to fill (degenerate case)
@@ -293,9 +248,13 @@ def delaunay_insert_point(
     # Reconstruct the polygon loop from boundary edges
     polygon = [boundary_edges[0][0], boundary_edges[0][1]]
     used = {boundary_edges[0]}
+    
+    # Iterate until all boundary edges are used
     while len(used) < len(boundary_edges):
         last_point = polygon[-1]
         found_next = False
+        
+        # Find the next edge that connects to the last point in the polygon
         for e in boundary_edges:
             if e in used:
                 continue
@@ -309,13 +268,10 @@ def delaunay_insert_point(
                 used.add(e)
                 found_next = True
                 break
+        
+        # If no connecting edge is found, break (degenerate case)
         if not found_next:
-            # If we can't form a closed polygon, break (degenerate case)
             print("Could not form a closed polygon")
-            print("No containing triangle found")
-            print("Points:", all_points)
-            print("New point:", new_point)
-            print("Triangles:", triangles)
             break
 
     # Triangulate the hole by connecting new_point to the polygon edges
@@ -339,9 +295,54 @@ def delaunay_insert_point(
             tags="triangle",
         )
     root.update()
-    sleep(0.5)
+    sleep(sleep_time_slider.get())
     # remaining triangles are the new triangulation triangles after inserting the new point and filling the hole
     return remaining_triangles
+
+def highlight_bad_triangles(bad_triangles):
+        # Highlight bad triangles in green
+    for t in bad_triangles:
+        canvas.create_polygon(
+            [t.p1.x, t.p1.y, t.p2.x, t.p2.y, t.p3.x, t.p3.y],
+            outline="lightgreen",
+            fill="",
+            tags="bad_triangle",
+            width=4,
+        )
+    root.update()
+    sleep(sleep_time_slider.get())
+
+def highlight_new_point(new_point):
+    # mark the new point with a circle around it
+    canvas.create_oval(
+        new_point.x - 5,
+        new_point.y - 5,
+        new_point.x + 5,
+        new_point.y + 5,
+        outline="orange",
+        tags="new_point_circle",
+        width=3,
+    )
+    root.update()
+    sleep(sleep_time_slider.get())
+
+def highlight_container_triangle(container_triangle):
+    canvas.create_polygon(
+        [
+            container_triangle.p1.x,
+            container_triangle.p1.y,
+            container_triangle.p2.x,
+            container_triangle.p2.y,
+            container_triangle.p3.x,
+            container_triangle.p3.y,
+        ],
+        outline="green",
+        fill="",
+        tags="triangle_containing_point",
+        width=4,
+    )
+    root.update()
+    sleep(sleep_time_slider.get())
 
 
 def draw_hull(hull_points):
@@ -351,10 +352,10 @@ def draw_hull(hull_points):
         p2 = hull_points[(i + 1) % len(hull_points)]
         canvas.create_line(p1.x, p1.y, p2.x, p2.y, fill="red", tags="hull")
     root.update()
-    sleep(0.5)
+    sleep(sleep_time_slider.get())
 
 
-def draw_triangulation(triangles):
+def draw_triangles(triangles):
     canvas.delete("triangle")
     for tri in triangles:
         canvas.create_polygon(
@@ -365,7 +366,7 @@ def draw_triangulation(triangles):
         )
     root.update()
     # A short pause to visualize step by step updates.
-    sleep(0.5)
+    sleep(sleep_time_slider.get())
 
 
 def perform_delaunay():
@@ -394,7 +395,7 @@ def perform_delaunay():
             t = Triangle(hull_points[0], hull_points[i], hull_points[i + 1])
             triangles.add(t)
         # Visualize the final triangulation (just the hull)
-        draw_triangulation(triangles)
+        draw_triangles(triangles)
     else:
         # Step 4: Initialize the triangulation with the first interior point and the convex hull
         p1 = interior_points[0]
@@ -402,7 +403,7 @@ def perform_delaunay():
             t = Triangle(p1, hull_points[i], hull_points[(i + 1) % len(hull_points)])
             triangles.add(t)
         # Show the initial triangulation after adding the first interior point
-        draw_triangulation(triangles)
+        draw_triangles(triangles)
 
         # Step 5: Insert the remaining interior points one by one with visualization after each insertion
         for i in range(1, len(interior_points)):
@@ -413,7 +414,7 @@ def perform_delaunay():
             print("End of iteration:", i)
             print("-------------------")
             # Visualize after inserting each point
-            draw_triangulation(triangles)
+            draw_triangles(triangles)
 
 
 ###############################################
@@ -442,13 +443,26 @@ heading_text.pack(pady=5)
 point_count_slider = tk.Scale(
     sidebar,
     from_=5,
-    to=20,
+    to=50,
     orient=tk.HORIZONTAL,
     label="Anzahl der Punkte",
     length=150,
 )
 point_count_slider.set(20)
 point_count_slider.pack(pady=5)
+
+sleep_time_slider = tk.Scale(
+    sidebar,
+    from_=0,
+    to=2,
+    resolution=0.1,
+    orient=tk.HORIZONTAL,
+    label="Schlafzeit (in Sekunden)",
+    length=150,
+)
+sleep_time_slider.set(0.5)
+sleep_time_slider.pack(pady=5)
+
 
 canvas = tk.Canvas(root, bg="white")
 canvas.grid(row=0, column=1, sticky="nsew")
