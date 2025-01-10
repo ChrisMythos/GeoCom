@@ -71,30 +71,12 @@ def circumcircle_contains(tri: Triangle, p: Point, epsilon=1e-8) -> bool:
 def normalize_edge(p1, p2):
     return tuple(sorted((p1, p2), key=lambda p: (p.x, p.y)))
 
+def is_valid_triangle(triangle):
+    # Extract points from the triangle
+    p1, p2, p3 = triangle.p1, triangle.p2, triangle.p3
+    # Use a set to check if all points are unique
+    return len({p1, p2, p3}) == 3
 
-def point_in_triangle_bad(pt: Point, tri: Triangle) -> bool:
-    p = pt
-    p1, p2, p3 = tri.p1, tri.p2, tri.p3
-
-    # Calculate vectors
-    v0 = (p3.x - p1.x, p3.y - p1.y)
-    v1 = (p2.x - p1.x, p2.y - p1.y)
-    v2 = (p.x - p1.x, p.y - p1.y)
-
-    # Dot products
-    dot00 = v0[0] * v0[0] + v0[1] * v0[1]
-    dot01 = v0[0] * v1[0] + v0[1] * v1[1]
-    dot02 = v0[0] * v2[0] + v0[1] * v2[1]
-    dot11 = v1[0] * v1[0] + v1[1] * v1[1]
-    dot12 = v1[0] * v2[0] + v1[1] * v2[1]
-
-    # Compute barycentric coordinates
-    inv_denom = 1 / (dot00 * dot11 - dot01 * dot01)
-    u = (dot11 * dot02 - dot01 * dot12) * inv_denom
-    v = (dot00 * dot12 - dot01 * dot02) * inv_denom
-
-    # Check if point is in triangle
-    return (u >= 0) and (v >= 0) and (u + v <= 1)
 
 
 def point_in_triangle(pt: Point, tri: Triangle) -> bool:
@@ -154,12 +136,11 @@ def find_cavity(
         for nbr in neighbors:
             if nbr not in bad_triangles:
                 if circumcircle_contains(nbr, new_point):
+                    # found a bad triangle
+                    print("Bad triangle found:", nbr)
                     bad_triangles.add(nbr)
                     stack.append(nbr)
-
-    # how many bad triangles found
-    print("Bad triangles found:", len(bad_triangles))
-    print("-------------------")
+    
     return bad_triangles
 
 
@@ -245,11 +226,20 @@ def delaunay_insert_point(
     print("Amount bad triangles:", len(bad_triangles))
     # Remove the bad triangles from the triangulation
     remaining_triangles = triangles - bad_triangles
+    
+    # remove invalid triangles (triangles with duplicate points)
+    remaining_triangles = {t for t in remaining_triangles if is_valid_triangle(t)}
+
     print(
         "Amount after removing bad triangles:",
         len(remaining_triangles),
     )
     print("-------------------")
+    # remaining_triangles 
+    for t in remaining_triangles:
+        print(t)
+    print("-------------------")
+    
     # clear all the highlighted triangles
     canvas.delete("triangle_containing_point")
     canvas.delete("triangle")
@@ -380,7 +370,6 @@ def draw_triangulation(triangles):
 
 def perform_delaunay():
     global points, canvas
-
     # Step 0: Check if there are enough points to perform triangulation
     if len(points) < 3:
         return
@@ -417,8 +406,12 @@ def perform_delaunay():
 
         # Step 5: Insert the remaining interior points one by one with visualization after each insertion
         for i in range(1, len(interior_points)):
+            print("-------------------")
+            print("Iteration:", i)
             p_i = interior_points[i]
             triangles = delaunay_insert_point(triangles, points, p_i)
+            print("End of iteration:", i)
+            print("-------------------")
             # Visualize after inserting each point
             draw_triangulation(triangles)
 
@@ -471,15 +464,20 @@ def clear_canvas():
 
 
 def add_point(x, y):
+    # Create the point
     p = Point(x, y)
     points.append(p)
+
+    # Draw the point on the canvas
     obj = canvas.create_oval(x - 3, y - 3, x + 3, y + 3, fill="black", tags="point")
     point_objs.append((obj, p))
 
+    # Draw the coordinates below the point
+    text_obj = canvas.create_text(x, y + 10, text=f"({x}, {y})", font=("Arial", 8), fill="gray", tags="coordinates")
+    point_objs.append((text_obj, p))
 
 def on_canvas_click(event):
     add_point(event.x, event.y)
-
 
 def generate_random_points():
     clear_canvas()
@@ -493,7 +491,6 @@ def generate_random_points():
         x = random.randint(5, width - 5)
         y = random.randint(5, height - 5)
         add_point(x, y)
-
 
 generate_points_button = tk.Button(
     sidebar, text="Punkte generieren", command=generate_random_points
