@@ -417,6 +417,54 @@ def perform_delaunay():
         # Show the initial triangulation after adding the first interior point
         draw_triangles(triangles)
 
+        # Check that the initial triangulation is valid check for delaunay condition and if not fix it by flipping edge (if needed)
+
+        for tri in list(triangles):
+            # Find neighbors of 'tri' (sharing an edge)
+            neighbors = find_triangle_neighbors(triangles, tri)
+            for nbr in neighbors:
+                # neighbour verticies + tri verticies (cause of set every verticy only once)
+                shared_vertices = set(tri.vertices()) & set(nbr.vertices())
+                if len(shared_vertices) == 2:
+                    # vertex of tri (not in the shared edge)
+                    tri_opposite = (set(tri.vertices()) - shared_vertices).pop()
+
+                    # vertex of neighbour (not in the shared edge)
+                    nbr_opposite = (set(nbr.vertices()) - shared_vertices).pop()
+
+                    shared_list = list(shared_vertices)
+                    check_tri = Triangle(shared_list[0], shared_list[1], nbr_opposite)
+
+                    if circumcircle_contains(check_tri, tri_opposite):
+                        print("Initial triangulation is not delaunay on this edge.")
+                        print("Flipping edge:", shared_vertices)
+
+                        # remove old triangles from the set
+                        triangles.remove(tri)
+                        triangles.remove(nbr)
+
+                        # create new triangles with the opposite points of neighbour and tri
+                        new_tri_flip_1 = Triangle(
+                            tri_opposite, shared_list[0], nbr_opposite
+                        )
+                        new_tri_flip_2 = Triangle(
+                            tri_opposite, nbr_opposite, shared_list[1]
+                        )
+
+                        triangles.add(new_tri_flip_1)
+                        triangles.add(new_tri_flip_2)
+
+                        # Break out of the neighbor loop since we've modified 'triangles'
+                        break
+
+            else:
+                # => no edge flip go next
+                continue
+            break
+
+        # Visualize the updated triangulation
+        draw_triangles(triangles)
+
         # Step 5: Insert the remaining interior points one by one with visualization after each insertion
         for i in range(1, len(interior_points)):
             print("-------------------")
