@@ -5,10 +5,12 @@ from dataclasses import dataclass
 from typing import List, Set
 from convex_hull import graham_scan
 
+
 @dataclass(frozen=True)
 class Point:
     x: float
     y: float
+
 
 @dataclass
 class Triangle:
@@ -72,11 +74,13 @@ def circumcircle_contains(tri: Triangle, p: Point, epsilon=1e-8) -> bool:
 def normalize_edge(p1, p2):
     return tuple(sorted((p1, p2), key=lambda p: (p.x, p.y)))
 
+
 def is_valid_triangle(triangle):
     # Extract points from the triangle
     p1, p2, p3 = triangle.p1, triangle.p2, triangle.p3
     # Use a set to check if all points are unique
     return len({p1, p2, p3}) == 3
+
 
 def point_in_triangle(pt: Point, tri: Triangle) -> bool:
     # Extract the point and the vertices of the triangle
@@ -85,7 +89,7 @@ def point_in_triangle(pt: Point, tri: Triangle) -> bool:
 
     # Calculate the denominator of the barycentric coordinates
     denom = (p2.y - p3.y) * (p1.x - p3.x) + (p3.x - p2.x) * (p1.y - p3.y)
-    
+
     # If the denominator is zero, the points are collinear and the point is not inside the triangle
     if denom == 0:
         return False
@@ -106,10 +110,12 @@ def find_triangle_containing_point(triangles: Set[Triangle], pt: Point):
     return None
 
 
-def find_triangle_neighbors(triangles: Set[Triangle], tri: Triangle) -> List[Triangle]:
+def find_triangle_neighbors(
+    triangles: Set[Triangle], tri_find_nbr: Triangle
+) -> List[Triangle]:
     # O(n) neighbor search
     nbrs = []
-    v = tri.vertices()
+    v = tri_find_nbr.vertices()
     edges = {
         normalize_edge(v[0], v[1]),
         normalize_edge(v[1], v[2]),
@@ -117,7 +123,7 @@ def find_triangle_neighbors(triangles: Set[Triangle], tri: Triangle) -> List[Tri
     }
 
     for t in triangles:
-        if t == tri:
+        if t == tri_find_nbr:
             continue
         v2 = t.vertices()
         t_edges = [
@@ -147,10 +153,11 @@ def find_cavity(
                     print("Bad triangle found:", nbr)
                     bad_triangles.add(nbr)
                     stack.append(nbr)
-    
+
     return bad_triangles
 
-# simpler implementation of find_cavity
+
+# simpler implementation of find_cavity -> not used
 def find_cavity_simple(triangles: Set[Triangle], new_point: Point) -> Set[Triangle]:
     """
     Simpler implementation of find_cavity.
@@ -183,7 +190,7 @@ def delaunay_insert_point(
     # Highlight the container triangle in green (for visualization)
     highlight_container_triangle(container_triangle)
 
-    # Find the cavity (connected bad triangles) that need to be removed 
+    # Find the cavity (connected bad triangles) that need to be removed
     bad_triangles = find_cavity(triangles, new_point, container_triangle)
 
     highlight_bad_triangles(bad_triangles)
@@ -192,7 +199,7 @@ def delaunay_insert_point(
     print("Amount bad triangles:", len(bad_triangles))
     # Remove the bad triangles from the triangulation
     remaining_triangles = triangles - bad_triangles
-    
+
     # remove invalid triangles (triangles with duplicate points)
     remaining_triangles = {t for t in remaining_triangles if is_valid_triangle(t)}
 
@@ -201,11 +208,11 @@ def delaunay_insert_point(
         len(remaining_triangles),
     )
     print("-------------------")
-    # remaining_triangles 
+    # remaining_triangles
     for t in remaining_triangles:
         print(t)
     print("-------------------")
-    
+
     # clear all the highlighted triangles
     canvas.delete("triangle_containing_point")
     canvas.delete("triangle")
@@ -246,61 +253,61 @@ def delaunay_insert_point(
         return remaining_triangles
 
     # Reconstruct the polygon loop from boundary edges
+    # Start with the first boundary edge
     polygon = [boundary_edges[0][0], boundary_edges[0][1]]
     used = {boundary_edges[0]}
-    
+
     # Iterate until all boundary edges are used
+    # (this should always be the case for a valid triangulation)
     while len(used) < len(boundary_edges):
         last_point = polygon[-1]
         found_next = False
-        
+
         # Find the next edge that connects to the last point in the polygon
         for e in boundary_edges:
+            # Skip if the edge is already used
             if e in used:
                 continue
+            # Check if the edge connects to the last point in the polygon in normal order
             if e[0] == last_point:
                 polygon.append(e[1])
                 used.add(e)
                 found_next = True
                 break
+            # elseif the edge connects to the last point in the polygon in reverse order
             elif e[1] == last_point:
                 polygon.append(e[0])
                 used.add(e)
                 found_next = True
                 break
-        
-        # If no connecting edge is found, break (degenerate case)
+
+        # If no connecting edge is found, break (degenerate case) - if this happens, the triangulation is invalid (cavity is not a hole)
         if not found_next:
             print("Could not form a closed polygon")
+            print("Polygon:", polygon)
+            print("Triangulation is invalid")
             break
 
     # Triangulate the hole by connecting new_point to the polygon edges
     for i in range(len(polygon)):
         p_current = polygon[i]
         p_next = polygon[(i + 1) % len(polygon)]
+        # Create a new triangle with the new point and the current and next polygon points
         new_tri = Triangle(new_point, p_current, p_next)
         remaining_triangles.add(new_tri)
 
-    # remove the boundary edges
+    # Update canvas: remove the boundary edges
     canvas.delete("boundary_edge")
     canvas.delete("new_point_circle")
 
     # Redraw the final updated triangulation in blue
-    canvas.delete("triangle")
-    for t in remaining_triangles:
-        canvas.create_polygon(
-            [t.p1.x, t.p1.y, t.p2.x, t.p2.y, t.p3.x, t.p3.y],
-            outline="blue",
-            fill="",
-            tags="triangle",
-        )
-    root.update()
-    sleep(sleep_time_slider.get())
+    draw_triangles(remaining_triangles)
     # remaining triangles are the new triangulation triangles after inserting the new point and filling the hole
     return remaining_triangles
 
+
 def highlight_bad_triangles(bad_triangles):
-        # Highlight bad triangles in green
+    # Highlight bad triangles in green
     for t in bad_triangles:
         canvas.create_polygon(
             [t.p1.x, t.p1.y, t.p2.x, t.p2.y, t.p3.x, t.p3.y],
@@ -311,6 +318,7 @@ def highlight_bad_triangles(bad_triangles):
         )
     root.update()
     sleep(sleep_time_slider.get())
+
 
 def highlight_new_point(new_point):
     # mark the new point with a circle around it
@@ -325,6 +333,7 @@ def highlight_new_point(new_point):
     )
     root.update()
     sleep(sleep_time_slider.get())
+
 
 def highlight_container_triangle(container_triangle):
     canvas.create_polygon(
@@ -375,7 +384,7 @@ def perform_delaunay():
     if len(points) < 3:
         return
 
-    # Step 1: Compute the convex hull using Graham's scan
+    # Step 1: Compute the convex hull using Graham's scan (from Excercise 1 - Convex Hull)
     points_tuple = [(p.x, p.y) for p in points]
     hull = graham_scan(points_tuple)
     hull_points = [Point(h[0], h[1]) for h in hull]
@@ -383,7 +392,10 @@ def perform_delaunay():
     hull_set = set(hull_points)
     interior_points = [p for p in points if p not in hull_set]
 
-    # Step 2: Visualize the convex hull
+    # Step 2: Shuffle the interior points to get a different order
+    random.shuffle(interior_points)
+
+    # Visualize the convex hull
     draw_hull(hull_points)
 
     # Step 3: Initialize the set of triangles with the convex hull
@@ -391,10 +403,10 @@ def perform_delaunay():
     if len(interior_points) == 0:
         if len(hull_points) < 3:
             return
+        # Special case: If there are no interior points, create triangles with the convex hull
         for i in range(1, len(hull_points) - 1):
             t = Triangle(hull_points[0], hull_points[i], hull_points[i + 1])
             triangles.add(t)
-        # Visualize the final triangulation (just the hull)
         draw_triangles(triangles)
     else:
         # Step 4: Initialize the triangulation with the first interior point and the convex hull
@@ -487,11 +499,20 @@ def add_point(x, y):
     point_objs.append((obj, p))
 
     # Draw the coordinates below the point
-    text_obj = canvas.create_text(x, y + 10, text=f"({x}, {y})", font=("Arial", 8), fill="gray", tags="coordinates")
+    text_obj = canvas.create_text(
+        x,
+        y + 10,
+        text=f"({x}, {y})",
+        font=("Arial", 8),
+        fill="gray",
+        tags="coordinates",
+    )
     point_objs.append((text_obj, p))
+
 
 def on_canvas_click(event):
     add_point(event.x, event.y)
+
 
 def generate_random_points():
     clear_canvas()
@@ -505,6 +526,7 @@ def generate_random_points():
         x = random.randint(5, width - 5)
         y = random.randint(5, height - 5)
         add_point(x, y)
+
 
 generate_points_button = tk.Button(
     sidebar, text="Punkte generieren", command=generate_random_points
