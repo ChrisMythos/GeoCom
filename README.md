@@ -8,8 +8,9 @@ This repository contains implementations of various computational geometry algor
 2. [Algorithms Implemented](#algorithms-implemented)
 3. [Installation](#installation)
 4. [Usage](#usage)
-5. [Project Structure](#project-structure)
-6. [Documentation](#documentation)
+5. [Testing](#testing)
+6. [Project Structure](#project-structure)
+7. [Documentation](#documentation)
 
 ## Overview
 
@@ -105,6 +106,49 @@ python src/kd_trees.py
 - Draw a rectangle by clicking and dragging to perform a range query
 - Click "Reset" to clear the canvas
 
+## Testing
+
+The project includes a comprehensive test suite to ensure the correctness of the implemented algorithms. The tests are located in the `tests/` directory.
+
+### Running Tests
+
+You can run all tests with:
+
+```bash
+python -m pytest
+```
+
+Or run specific test files:
+
+```bash
+python -m pytest tests/test_intersection_detection.py
+```
+
+Or run specific test cases:
+
+```bash
+python -m pytest tests/test_intersection_detection.py::TestIntersectionDetection::test_basic_intersection
+```
+
+Use the `-v` flag for verbose output:
+
+```bash
+python -m pytest -v
+```
+
+### Test Coverage
+
+The tests cover:
+
+- **Intersection Detection**: Basic intersection detection, handling of parallel and collinear segments, T-junctions, endpoint intersections, numerical precision issues, etc.
+- **Sweep Line Algorithm**: Empty, single, and multiple segment cases, grid patterns, star patterns, segments with shared endpoints, etc.
+- **AVL Tree**: Tree balancing, insertion and deletion, finding predecessors and successors, range searching.
+- **Convex Hull**: Graham scan algorithm, handling of collinear points, duplicate points, various shapes.
+- **Delaunay Triangulation**: Circumcircle tests, triangulation of simple point sets, handling of collinear and duplicate points.
+- **KD-Tree**: Tree construction, range searching, nearest neighbor searching.
+
+For more details, see the [tests/README.md](tests/README.md) file.
+
 ## Project Structure
 
 ```text
@@ -114,21 +158,34 @@ GeoCom/
 ├── README_A4.md                    # Documentation for Delaunay triangulation
 ├── README_intersect2D.md           # Documentation for line segment intersection
 ├── README_Sweep_Line_with_tree.md  # Documentation for sweep-line with AVL tree
+├── requirements.txt                # Project dependencies
 ├── ExcercisePDFs/                  # Exercise PDFs
 │   ├── CompGeoA1.pdf
 │   ├── CompGeoA2.pdf
 │   ├── CompGeoA3.pdf
 │   └── CompGeoA4.pdf
-└── src/                            # Source code
-    ├── AVL_tree.py                 # AVL tree implementation
-    ├── convex_hull_visualizer.py   # Convex hull visualization
-    ├── convex_hull.py              # Convex hull algorithms
-    ├── delaunay.py                 # Delaunay triangulation
-    ├── intersec_2D_with_tree.py    # Sweep-line with AVL tree
-    ├── intersec_2D.py              # Basic sweep-line implementation
-    ├── intersections_ISO_2D.py     # Iso-oriented segment intersections
-    ├── intersections2D_arbitrary_segments.py # Arbitrary segment intersections
-    └── kd_trees.py                 # KD-tree implementation
+├── src/                            # Source code
+│   ├── AVL_tree.py                 # AVL tree implementation
+│   ├── convex_hull_visualizer.py   # Convex hull visualization
+│   ├── convex_hull.py              # Convex hull algorithms
+│   ├── delaunay.py                 # Delaunay triangulation
+│   ├── intersec_2D_with_tree.py    # Sweep-line with AVL tree
+│   ├── intersec_2D.py              # Basic sweep-line implementation
+│   ├── intersections_ISO_2D.py     # Iso-oriented segment intersections
+│   ├── intersections2D_arbitrary_segments.py # Arbitrary segment intersections
+│   └── kd_trees.py                 # KD-tree implementation
+└── tests/                          # Test suite
+    ├── README.md                   # Test documentation
+    ├── conftest.py                 # Test fixtures and utilities
+    ├── intersection_algorithm_test.py # Non-GUI version of intersection algorithm
+    ├── kd_trees_test.py            # Non-GUI version of KD-tree
+    ├── test_avl_tree.py            # Tests for AVL tree
+    ├── test_convex_hull.py         # Tests for convex hull
+    ├── test_delaunay.py            # Tests for Delaunay triangulation
+    ├── test_intersection_detection.py # Tests for intersection detection
+    ├── test_intersections.py       # Tests for line segment intersection
+    ├── test_kd_tree.py             # Tests for KD-tree
+    └── test_sweep_line_algorithm.py # Tests for sweep-line algorithm
 ```
 
 ## Documentation

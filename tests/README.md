@@ -1,117 +1,94 @@
 # GeoCom Tests
 
-This directory contains tests for the GeoCom computational geometry library. The tests are written using the pytest framework and cover various components of the library.
+This directory contains comprehensive tests for the GeoCom computational geometry library.
 
 ## Test Structure
 
 The tests are organized by component:
 
-- `test_avl_tree.py`: Tests for the AVL tree implementation
-- `test_convex_hull.py`: Tests for the convex hull algorithms
-- `test_delaunay.py`: Tests for the Delaunay triangulation
-- `test_intersections.py`: Tests for the line segment intersection algorithms
-- `test_kd_tree.py`: Tests for the KD-tree implementation
-- `conftest.py`: Common fixtures and utilities for tests
+- **test_avl_tree.py**: Tests for the AVL tree implementation
+- **test_convex_hull.py**: Tests for the convex hull algorithm
+- **test_delaunay.py**: Tests for the Delaunay triangulation algorithm
+- **test_intersections.py**: Tests for the original line segment intersection implementation
+- **test_intersection_detection.py**: Tests for the intersection detection functionality
+- **test_sweep_line_algorithm.py**: Tests for the Bentley-Ottmann sweep-line algorithm
+- **test_kd_tree.py**: Tests for the KD-tree implementation
 
-## Running the Tests
+## Test Utilities
 
-### Prerequisites
+- **intersection_algorithm_test.py**: A non-GUI version of the line segment intersection algorithm for testing
+- **kd_trees_test.py**: A non-GUI version of the KD-tree implementation for testing
+- **conftest.py**: Common fixtures and utilities for tests
 
-Make sure you have pytest installed:
+## Running Tests
+
+You can run all tests with:
 
 ```bash
-pip install pytest
+python -m pytest
 ```
 
-Or install all dependencies from the project's requirements.txt:
+Or run specific test files:
 
 ```bash
-pip install -r ../requirements.txt
+python -m pytest tests/test_intersection_detection.py
 ```
 
-### Running All Tests
-
-From the project root directory:
+Or run specific test cases:
 
 ```bash
-pytest tests/
+python -m pytest tests/test_intersection_detection.py::TestIntersectionDetection::test_basic_intersection
 ```
 
-### Running Specific Test Files
+Use the `-v` flag for verbose output:
 
 ```bash
-pytest tests/test_avl_tree.py
-pytest tests/test_convex_hull.py
-# etc.
-```
-
-### Running Specific Test Functions
-
-```bash
-pytest tests/test_avl_tree.py::TestAVLTree::test_insert_single_value
-```
-
-### Running Tests with Verbose Output
-
-```bash
-pytest -v tests/
-```
-
-### Running Tests with Coverage Report
-
-If you have pytest-cov installed:
-
-```bash
-pytest --cov=src tests/
+python -m pytest -v
 ```
 
 ## Test Coverage
 
-The tests cover the following aspects of the library:
+The tests cover:
 
-### AVL Tree Tests
+### Intersection Detection
+- Basic intersection detection between two segments
+- Handling of parallel and collinear segments
+- T-junctions and endpoint intersections
+- Numerical precision issues
+- Very small and very large segments
+- Shared endpoints
 
-- Tree creation and basic operations
-- Insertion and deletion of nodes
-- Tree balancing (left-left, right-right, left-right, right-left cases)
-- Successor pointers
-- Range queries
+### Sweep Line Algorithm
+- Empty, single, and multiple segment cases
+- Grid patterns and star patterns
+- Segments with shared endpoints
+- Segments with multiple intersections
+- Comparison with naive approach
 
-### Convex Hull Tests
+### AVL Tree
+- Tree balancing (left-left, left-right, right-left, right-right rotations)
+- Insertion and deletion
+- Finding predecessors and successors
+- Range searching
 
-- Point orientation determination
-- Graham Scan algorithm
-- Edge cases (collinear points, duplicate points)
-- Random point sets
+### Convex Hull
+- Graham scan algorithm
+- Handling of collinear points
+- Handling of duplicate points
+- Various shapes (triangles, squares, complex shapes)
 
-### Delaunay Triangulation Tests
+### Delaunay Triangulation
+- Circumcircle tests
+- Triangulation of simple point sets
+- Handling of collinear and duplicate points
 
-- Circumcircle test
-- Triangulation construction
-- Edge cases (collinear points, duplicate points)
-- Random point sets
+### KD-Tree
+- Tree construction
+- Range searching
+- Nearest neighbor searching
 
-### Line Segment Intersection Tests
+## Notes
 
-- Intersection detection
-- Sweep-line algorithm
-- Edge cases (parallel segments, collinear segments, T-junctions)
-- Segment operations (slope calculation, y-coordinate at x)
-
-### KD-Tree Tests
-
-- Tree creation and basic operations
-- Insertion of points
-- Nearest neighbor search
-- Range queries
-- Edge cases (empty tree, points outside range)
-
-## Adding New Tests
-
-When adding new tests:
-
-1. Follow the existing pattern for test files and classes
-2. Use descriptive test function names that explain what is being tested
-3. Add docstrings to test functions to explain the test purpose
-4. Consider adding common fixtures to `conftest.py` if they will be used across multiple test files
-5. Ensure tests are deterministic (use fixed seeds for random operations)
+- The tests use a simplified version of the algorithms without GUI components to make testing easier.
+- Some tests compare the results of the optimized algorithms with naive implementations to ensure correctness.
+- The tests include edge cases and stress tests to ensure the algorithms are robust.
