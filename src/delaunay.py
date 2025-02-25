@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from typing import List, Set, Tuple, Optional
 
 # Assuming graham_scan is implemented in convex_hull.py
-from convex_hull import graham_scan
+from src.convex_hull import graham_scan
 
 
 # ===========================

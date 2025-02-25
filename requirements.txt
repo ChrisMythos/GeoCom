@@ -1,0 +1,19 @@
+# GeoCom - Computational Geometry Algorithms and Visualizations
+# Python version: 3.6+
+
+# Core dependencies
+numpy>=1.19.0
+
+# Tkinter is included in standard Python installations
+# If you're using a minimal Python installation, you may need to install it separately:
+# For Ubuntu/Debian: sudo apt-get install python3-tk
+# For Fedora/RHEL: sudo dnf install python3-tkinter
+# For macOS with Homebrew: brew install python-tk
+# For Windows: Tkinter is included in the standard Python installer
+
+# Testing dependencies
+pytest>=6.0.0  # For running tests
+
+# Optional dependencies for development
+# flake8>=3.8.0  # For code linting
+# black>=20.8b1  # For code formatting
