@@ -51,6 +51,7 @@ python -m pytest -v
 The tests cover:
 
 ### Intersection Detection
+
 - Basic intersection detection between two segments
 - Handling of parallel and collinear segments
 - T-junctions and endpoint intersections
@@ -59,6 +60,7 @@ The tests cover:
 - Shared endpoints
 
 ### Sweep Line Algorithm
+
 - Empty, single, and multiple segment cases
 - Grid patterns and star patterns
 - Segments with shared endpoints
@@ -66,23 +68,27 @@ The tests cover:
 - Comparison with naive approach
 
 ### AVL Tree
+
 - Tree balancing (left-left, left-right, right-left, right-right rotations)
 - Insertion and deletion
 - Finding predecessors and successors
 - Range searching
 
 ### Convex Hull
+
 - Graham scan algorithm
 - Handling of collinear points
 - Handling of duplicate points
 - Various shapes (triangles, squares, complex shapes)
 
 ### Delaunay Triangulation
+
 - Circumcircle tests
 - Triangulation of simple point sets
 - Handling of collinear and duplicate points
 
 ### KD-Tree
+
 - Tree construction
 - Range searching
 - Nearest neighbor searching
